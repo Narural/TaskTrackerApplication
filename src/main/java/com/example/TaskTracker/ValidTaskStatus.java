@@ -5,7 +5,8 @@ import jakarta.validation.Payload;
 
 import java.lang.annotation.*;
 
-@Target(ElementType.FIELD)
+@Target({ElementType.FIELD, ElementType.PARAMETER,
+        ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Constraint(validatedBy = TaskStatusValidator.class)
 @Documented

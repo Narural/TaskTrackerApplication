@@ -1,49 +1,65 @@
 package com.example.TaskTracker;
-
+import com.example.TaskTracker.Exceptions.ExistingTagException;
+import jakarta.persistence.*;
 import com.example.TaskTracker.Enums.TaskPriority;
 import com.example.TaskTracker.Enums.TaskStatus;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
-
-public class Task {
-    private static final AtomicLong ID_COUNTER = new AtomicLong(0);
-    private final long id;
-    private final String title;
+@Entity
+@Table(name = "tasks")
+public class        Task {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    @Column(nullable = false, length = 100)
+    private String title;
+    @Column(nullable = true, length = 100)
     private String description;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
     private TaskPriority priority;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
     private TaskStatus status;
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+    @ElementCollection
+    @CollectionTable(
+            name = "task_tags",
+            joinColumns = @JoinColumn(name = "task_id")
+    )
+    @Column(name = "tag")
     private Set<String> tags;
-    public Task() {
-        description = " ";
-        id = ID_COUNTER.incrementAndGet();
-        priority = TaskPriority.LOW;
-        status = TaskStatus.NEW;
-        tags = new HashSet<>();
-        title = " ";
-    }
 
-    public Task(long id, String title, String description,
-                TaskPriority priority, TaskStatus status, Set<String> tags) {
-        this.id = id;
-        this.title = title;
-        this.description = description;
-        this.priority = priority;
-        this.status = status;
-        this.tags = tags;
+    protected Task() {
+
     }
     public Task(String title, TaskPriority priority, String description) {
         this.title = title;
         this.priority = priority;
         this.description = description;
-        this.id = ID_COUNTER.incrementAndGet();
         this.tags = new HashSet<>();
         this.status = TaskStatus.NEW;
+        this.createdAt = LocalDateTime.now();
     }
 
-    public long getId() {
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Long getId() {
         return id;
     }
 
@@ -83,6 +99,8 @@ public class Task {
         this.tags = tags;
     }
     public void addTag(String tag){
+        if(tags.contains(tag))
+            throw new ExistingTagException();
         tags.add(tag);
     }
 
@@ -90,7 +108,7 @@ public class Task {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Task task = (Task) o;
-        return id == task.id && Objects.equals(title, task.title) && Objects.equals(description, task.description);
+        return Objects.equals(id, task.id) && Objects.equals(title, task.title) && Objects.equals(description, task.description);
     }
 
     @Override

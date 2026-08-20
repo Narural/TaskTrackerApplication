@@ -25,11 +25,11 @@ public class CreateTaskRequest {
         this.title = title;
     }
 
-    public TaskPriority getStatus() {
+    public TaskPriority getPriority() {
         return priority;
     }
 
-    public void setStatus(TaskPriority priority) {
+    public void setPriority(TaskPriority priority) {
         this.priority = priority;
     }
 
