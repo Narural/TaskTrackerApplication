@@ -6,12 +6,13 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.util.List;
-
+import com.example.TaskTracker.AddTagRequest;
 @RestController
 @RequestMapping("/api/task")
 public class TaskController {
@@ -48,8 +49,14 @@ public class TaskController {
         return ResponseEntity.ok(taskService.changePriority(TaskPriority.valueOf(request.getPriority()), id));
     }
     @PostMapping("/{id}/tags")
-    public ResponseEntity<List<String>> addTag(@Valid @NotBlank String tag, @PathVariable long id){
-        return ResponseEntity.ok(taskService.addTag(tag, id));
+    public ResponseEntity<List<String>> addTag(@Valid @RequestBody AddTagRequest tagRequest, @PathVariable long id){
+        return ResponseEntity.status(HttpStatus.CREATED).
+                body(taskService.addTag(tagRequest.getTag(), id));
+    }
+    @DeleteMapping("/{id}/tags/{tag}")
+    public ResponseEntity<List<String>> removeTag(@PathVariable long id, @PathVariable String tag){
+
+        return ResponseEntity.ok(taskService.removeTag(tag, id));
     }
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTask(@PathVariable long id){
@@ -62,13 +69,12 @@ public class TaskController {
     }
     @GetMapping("/byStatus")
     public ResponseEntity<Page<TaskResponse>> findByStatus(
-            @ValidTaskStatus @RequestParam TaskStatus status, Pageable pageable){
+             @RequestParam TaskStatus status, Pageable pageable){
         return ResponseEntity.ok(taskService.findByStatus(status, pageable));
     }
     @GetMapping("/byStatusAndPriority")
-    public ResponseEntity<Page<TaskResponse>> findByStatus(@ValidTaskStatus
+    public ResponseEntity<Page<TaskResponse>> findByStatus(
                                                        @RequestParam TaskStatus status,
-                                                   @ValidTaskPriority
                                                    @RequestParam TaskPriority priority,
                                                            Pageable pageable){
         return ResponseEntity.ok(

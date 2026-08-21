@@ -73,6 +73,12 @@ public class TaskService {
         return new ArrayList<>(newTask.getTags());
     }
     @Transactional
+    public List<String> removeTag(String tag, long id){
+        Task newTask = findTaskEntity(id);
+        newTask.removeTag(tag);
+        return new ArrayList<>(newTask.getTags());
+    }
+    @Transactional
     public void deleteTask(long id){
         Task newTask = findTaskEntity(id);
         taskRepository.delete(newTask);

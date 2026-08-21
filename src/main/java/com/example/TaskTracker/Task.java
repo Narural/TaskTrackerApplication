@@ -3,7 +3,8 @@ import com.example.TaskTracker.Exceptions.ExistingTagException;
 import jakarta.persistence.*;
 import com.example.TaskTracker.Enums.TaskPriority;
 import com.example.TaskTracker.Enums.TaskStatus;
-
+import org.hibernate.annotations.BatchSize;
+import com.example.TaskTracker.Exceptions.NotExistingTagExceptions;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Objects;
@@ -33,6 +34,7 @@ public class        Task {
             joinColumns = @JoinColumn(name = "task_id")
     )
     @Column(name = "tag")
+    @BatchSize(size = 20)
     private Set<String> tags;
 
     protected Task() {
@@ -103,7 +105,12 @@ public class        Task {
             throw new ExistingTagException();
         tags.add(tag);
     }
-
+public void removeTag(String tag){
+        if(tags.contains(tag))
+            tags.remove(tag);
+        else
+            throw new NotExistingTagExceptions();
+}
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
