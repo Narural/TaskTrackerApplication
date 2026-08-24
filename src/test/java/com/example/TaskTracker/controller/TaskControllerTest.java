@@ -55,7 +55,7 @@ public class TaskControllerTest {
     void createTask_blankTitle_returns400AndDontCreateTask() throws Exception{
         mockMvc.perform(post("/api/task").
                 contentType(MediaType.APPLICATION_JSON).content(
-    "{\"title\":\"\",\"priority\":\"HIGH\",\"description\":\"desc\"}"))
+                        "{\"title\":\"\",\"priority\":\"HIGH\",\"description\":\"desc\"}"))
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(taskService);
     }
