@@ -4,6 +4,7 @@ import com.example.TaskTracker.model.Task;
 import com.example.TaskTracker.model.TaskPriority;
 import com.example.TaskTracker.model.TaskStatus;
 import jakarta.persistence.EntityManager;
+import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.Session;
 import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.Test;
@@ -13,7 +14,10 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
-
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -22,7 +26,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+// @Testcontainers   // временно выключено: Docker недоступен
 public class TaskRepositoryTest {
+    // @Container
+    // @ServiceConnection
+    // static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18");
     @Autowired
     private TaskRepository taskRepository;
     @Autowired
@@ -102,7 +110,8 @@ public class TaskRepositoryTest {
                 .executeUpdate();
             entityManager.flush();
         })
-                .isInstanceOf(DataIntegrityViolationException.class);
+                .isInstanceOf(ConstraintViolationException.class)
+                .hasMessageContaining("uq_task_tags");
     }
     @Test
     void queryAmount_idkHowToNameThisTestNgl(){
