@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
+import org.springframework.test.context.jdbc.Sql;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers
@@ -68,26 +68,6 @@ public class    TaskRepositoryTest {
         assertThat(found.getContent())
                 .extracting(Task::getTitle)
                 .containsExactlyInAnyOrder("ТЕсты", "тесты");
-    }
-    @Test
-    void countGroupedByStatus_filledStatuses_correctCount(){
-        Task task1 = taskRepository.save(new Task("ТЕсты", TaskPriority.HIGH, "a"));
-        Task task2 = taskRepository.save(new Task("тесты", TaskPriority.HIGH, "a"));
-        var group = taskRepository.countGroupedByStatus();
-        Map<TaskStatus, Long> counts = group.stream()
-                .collect(Collectors.toMap(StatusCountProjection::getStatus,
-                        StatusCountProjection::getCount));
-        assertThat(counts).containsEntry(TaskStatus.NEW, 2L);
-    }
-    @Test
-    void countGroupedByPriority_filledPriorities_correctCount(){
-        Task task1 = taskRepository.save(new Task("ТЕсты", TaskPriority.HIGH, "a"));
-        Task task2 = taskRepository.save(new Task("тесты", TaskPriority.LOW, "a"));
-        var group = taskRepository.countGroupedByPriority();
-        Map<TaskPriority, Long> counts = group.stream()
-                .collect(Collectors.toMap(PriorityCountProjection::getPriority,
-                        PriorityCountProjection::getCount));
-        assertThat(counts).containsEntry(TaskPriority.HIGH, 1L);
     }
     @Test
     void deleteCascade_existingTaskDelete_taskTagsDeletesWithTask(){
@@ -158,5 +138,31 @@ public class    TaskRepositoryTest {
     @DisplayName("ddl-auto=validate включён — без него схема и entity не сверяются")
     void hibernateDdlAuto_inTests_isValidate(){
         assertThat(ddlAuto).isEqualTo("validate");
+    }
+    @Test
+    @Sql("/sql/tasks-mixed.sql")
+    @DisplayName("Счёт по статусам группирует все имеющиеся статусы")
+    void countGroupedByStatus_mixedStates_countsEveryGroup(){
+        Map<TaskStatus, Long> counts = taskRepository.countGroupedByStatus().stream()
+                .collect(Collectors.toMap(StatusCountProjection::getStatus,
+                        StatusCountProjection::getCount));
+
+        assertThat(counts)
+                .containsOnlyKeys(TaskStatus.NEW, TaskStatus.IN_PROCESS, TaskStatus.DONE)
+                .containsEntry(TaskStatus.NEW, 2L)
+                .containsEntry(TaskStatus.IN_PROCESS, 1L)
+                .containsEntry(TaskStatus.DONE, 2L);
+    }
+    @Test
+    @Sql("/sql/tasks-mixed.sql")
+    @DisplayName("Счёт по приоритетам группирует имеющиеся статусы")
+    void countGroupedBuPriority_mixedPriorities_countsEveryGroup(){
+        Map<TaskPriority, Long> counts = taskRepository.countGroupedByPriority().stream()
+                .collect(Collectors.toMap(PriorityCountProjection::getPriority, PriorityCountProjection::getCount));
+        assertThat(counts)
+                .containsEntry(TaskPriority.CRITICAL, 1L)
+                .containsEntry(TaskPriority.HIGH, 2L)
+                .containsEntry(TaskPriority.LOW, 1L)
+                .containsEntry(TaskPriority.MEDIUM, 1L);
     }
 }
