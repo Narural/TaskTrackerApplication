@@ -1,6 +1,7 @@
 package com.example.TaskTracker.controller;
 
 import com.example.TaskTracker.dto.TaskResponse;
+import com.example.TaskTracker.dto.TaskStatistic;
 import com.example.TaskTracker.exception.ChangeStatusException;
 import com.example.TaskTracker.exception.ExistingTagException;
 import com.example.TaskTracker.exception.FoundTaskException;
@@ -19,7 +20,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
-
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -130,7 +130,7 @@ public class TaskControllerTest {
                                 "статус можно менять только на 1 шаг"));
     }
     @Test
-    void addTag_newTag_returns201AndAddsTag() throws Exception{
+    void addTag_newTag_returns201AndAddsTagaddTag_newTag_returns201AndAddsTag() throws Exception{
         when(taskService.addTag("Test", 1L)).thenReturn(List.of("Test"));
         mockMvc.perform(post("/api/task/1/tags")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -190,4 +190,79 @@ public class TaskControllerTest {
                 .andExpect(jsonPath("$.priority").value("LOW"));
     }
 
+
+    @Test
+    void getStatistic_noTasks_returns200WithZeroCounts() throws Exception{
+        when(taskService.getStatistic())
+                .thenReturn(new TaskStatistic(List.of(), List.of()));
+
+        mockMvc.perform(get("/api/task/statistic"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalTasks").value(0))
+                .andExpect(jsonPath("$.countByStatus.NEW").value(0))
+                .andExpect(jsonPath("$.countByStatus.DONE").value(0));
+    }
+
+    @Test
+    void findByStatusAndPriority_allowedParams_returns200AndTasks() throws Exception{
+        Page<TaskResponse> page = new PageImpl<>(
+                List.of(taskResponse(1L, "Test", TaskStatus.NEW, TaskPriority.HIGH)));
+        when(taskService.findByStatusAndPriority(eq(TaskStatus.NEW), eq(TaskPriority.HIGH),
+                any(Pageable.class))).thenReturn(page);
+
+        mockMvc.perform(get("/api/task/byStatusAndPriority")
+                        .param("status", "NEW").param("priority", "HIGH"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].status").value("NEW"))
+                .andExpect(jsonPath("$.content[0].priority").value("HIGH"));
+    }
+
+    @Test
+    void findByStatusAndPriority_unknownPriority_returns400NoServerError() throws Exception{
+        mockMvc.perform(get("/api/task/byStatusAndPriority")
+                        .param("status", "NEW").param("priority", "ОЧЕНЬ_ВАЖНО"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").exists());
+
+        verifyNoInteractions(taskService);
+    }
+
+    @Test
+    void findByTitle_existingFragment_returns200AndTasks() throws Exception{
+        Page<TaskResponse> page = new PageImpl<>(
+                List.of(taskResponse(1L, "Отчёт", TaskStatus.NEW, TaskPriority.HIGH)));
+        when(taskService.findByTitleContainingIgnoreCase(eq("отч"), any(Pageable.class)))
+                .thenReturn(page);
+
+        mockMvc.perform(get("/api/task/byTitle").param("title", "отч"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].title").value("Отчёт"));
+    }
+
+    @Test
+    void findByStatus_noMatchingTasks_returns200AndEmptyContent() throws Exception{
+        when(taskService.findByStatus(eq(TaskStatus.CANCELED), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        mockMvc.perform(get("/api/task/byStatus").param("status", "CANCELED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    void createTask_clientSuppliedIdAndStatus_ignoresThem() throws Exception{
+        when(taskService.createTask(anyString(), any(TaskPriority.class), anyString()))
+                .thenReturn(taskResponse(7L, "Sneaky", TaskStatus.NEW, TaskPriority.LOW));
+
+        mockMvc.perform(post("/api/task").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":999,\"status\":\"DONE\",\"title\":\"Sneaky\"," +
+                                 "\"priority\":\"LOW\",\"description\":\"Test\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(7))
+                .andExpect(jsonPath("$.status").value("NEW"));
+
+        verify(taskService).createTask("Sneaky", TaskPriority.LOW, "Test");
+    }
 }

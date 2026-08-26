@@ -37,14 +37,6 @@ public class TaskService {
         return new TaskResponse(taskRepository.save(newTask));
     }
     @Transactional
-    public void createTaskWithFail(String title, TaskPriority priority, String description){
-        Task newTask = new Task(title, priority, description);
-        taskRepository.save(newTask);
-        newTask.addTag("rawe");
-        newTask.addTag("aaa");
-        throw new RuntimeException();
-    }
-    @Transactional
     public TaskResponse changeStatus(TaskStatus status, long id){
         Task newTask = findTaskEntity(id);
         if(newTask.getStatus().canMoveTo(status))
@@ -78,7 +70,7 @@ public class TaskService {
     }
     @Transactional(readOnly = true)
     public TaskStatistic getStatistic(){
-        return new TaskStatistic(taskRepository.count(),
+        return new TaskStatistic(
                 taskRepository.countGroupedByStatus(),
                 taskRepository.countGroupedByPriority());
     }

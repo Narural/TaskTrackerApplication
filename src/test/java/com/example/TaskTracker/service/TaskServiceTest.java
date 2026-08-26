@@ -3,6 +3,7 @@ import com.example.TaskTracker.dto.TaskResponse;
 import com.example.TaskTracker.exception.ChangeStatusException;
 import com.example.TaskTracker.exception.ExistingTagException;
 import com.example.TaskTracker.exception.FoundTaskException;
+import com.example.TaskTracker.exception.NotExistingTagExceptions;
 import com.example.TaskTracker.model.Task;
 import com.example.TaskTracker.model.TaskPriority;
 import com.example.TaskTracker.model.TaskStatus;
@@ -13,7 +14,17 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -98,5 +109,75 @@ public class TaskServiceTest {
         when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
         taskService.deleteTask(1L);
         verify(taskRepository).delete(task);
+    }
+    @Test
+    void removeTag_existingTag_returnsRemainingTags(){
+        Task task = new Task("Test", TaskPriority.HIGH, "Test");
+        task.addTag("Test1");
+        task.addTag("Test");
+        when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
+
+        List<String> remaining = taskService.removeTag("Test1", 1L);
+
+        assertThat(remaining).containsExactly("Test");
+        assertThat(task.getTags()).containsExactly("Test");
+    }
+    @Test
+    void removeTag_unexistingTag_throwsException(){
+        Task task = new Task("Test", TaskPriority.HIGH, "Test");
+        when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
+        assertThatThrownBy(()->taskService.removeTag("test", 1L)).isInstanceOf(NotExistingTagExceptions.class);
+        verify(taskRepository).findById(1L);
+        verifyNoMoreInteractions(taskRepository);
+    }
+    @Test
+    void findByStatus_matchingTasks_returnsMappedResponse(){
+
+            Pageable pageable = PageRequest.of(0, 20);
+            Task task = new Task("Отчёт", TaskPriority.HIGH, "квартальный");
+
+            when(taskRepository.findByStatus(TaskStatus.NEW, pageable))
+                    .thenReturn(new PageImpl<>(List.of(task), pageable, 1));
+
+            Page<TaskResponse> result = taskService.findByStatus(TaskStatus.NEW, pageable);
+
+            assertThat(result.getContent())
+                    .extracting(TaskResponse::getTitle)
+                    .containsExactly("Отчёт");
+            assertThat(result.getContent())
+                    .extracting(TaskResponse::getStatus)
+                    .containsExactly(TaskStatus.NEW);
+            assertThat(result.getTotalElements()).isEqualTo(1);
+        }
+
+
+    @Test
+    void findByStatusAndPriority_matchingTasks_returnsMappedResponses(){
+        Pageable pageable = PageRequest.of(0, 20);
+        Task task = new Task("Отчёт", TaskPriority.HIGH, "квартальный");
+        when(taskRepository.findByStatusAndPriority(TaskStatus.NEW, TaskPriority.HIGH, pageable))
+                .thenReturn(new PageImpl<>(List.of(task), pageable, 1));
+
+        Page<TaskResponse> result =
+                taskService.findByStatusAndPriority(TaskStatus.NEW, TaskPriority.HIGH, pageable);
+
+        assertThat(result.getContent())
+                .extracting(TaskResponse::getPriority).containsExactly(TaskPriority.HIGH);
+        assertThat(result.getTotalElements()).isEqualTo(1);
+    }
+
+    @Test
+    void findByTitleContainingIgnoreCase_matchingTitle_returnsMappedResponses(){
+        Pageable pageable = PageRequest.of(0, 20);
+        Task task = new Task("Отчёт", TaskPriority.HIGH, "квартальный");
+        when(taskRepository.findByTitleContainingIgnoreCase("отч", pageable))
+                .thenReturn(new PageImpl<>(List.of(task), pageable, 1));
+
+        Page<TaskResponse> result =
+                taskService.findByTitleContainingIgnoreCase("отч", pageable);
+
+        assertThat(result.getContent())
+                .extracting(TaskResponse::getTitle).containsExactly("Отчёт");
+        assertThat(result.getTotalElements()).isEqualTo(1);
     }
 }

@@ -90,13 +90,4 @@ public class TaskController {
                                                           Pageable pageable){
         return ResponseEntity.ok(taskService.findByTitleContainingIgnoreCase(title, pageable));
     }
-    @PostMapping("/test-rollback")
-    public void testRollback() {
-
-        taskService.createTaskWithFail(
-                "Rollback task",
-                TaskPriority.HIGH,
-                "Testing transaction"
-        );
-    }
 }

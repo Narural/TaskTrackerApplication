@@ -14,16 +14,23 @@ public class TaskStatistic {
     private final Map<TaskPriority, Long> countByPriority;
     private final Map<TaskStatus, Long> countByStatus;
 
-    public TaskStatistic(long totalTasks, List<StatusCountProjection> byStatus,
+    public TaskStatistic(List<StatusCountProjection> byStatus,
                          List<PriorityCountProjection> byPriority){
-        this.totalTasks =  totalTasks;
+
         this.countByPriority = new EnumMap<>(TaskPriority.class);
+        for (TaskPriority priority : TaskPriority.values())
+            countByPriority.put(priority, 0L);
+
         for(PriorityCountProjection p : byPriority)
             countByPriority.put(p.getPriority() ,p.getCount());
 
         this.countByStatus = new EnumMap<>(TaskStatus.class);
+        for (TaskStatus status : TaskStatus.values())
+            countByStatus.put(status, 0L);
         for (StatusCountProjection s: byStatus)
             countByStatus.put(s.getStatus(), s.getCount());
+        this.totalTasks = countByStatus.values().stream()
+                .mapToLong(Long::longValue).sum();
     }
 
     public long getTotalTasks() {
