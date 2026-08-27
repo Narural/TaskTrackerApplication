@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import jakarta.persistence.Version;
 @Entity
 @Table(name = "tasks")
 public class        Task {
@@ -38,6 +39,9 @@ public class        Task {
     protected Task() {
 
     }
+    @Version
+    @Column(nullable = false)
+    private Long version;
     public Task(String title, TaskPriority priority, String description) {
         this.title = title;
         this.priority = priority;
@@ -97,6 +101,9 @@ public class        Task {
 
     public void setTags(Set<String> tags) {
         this.tags = tags;
+    }
+    public Long getVersion() {
+        return version;
     }
     public void addTag(String tag){
         if(tags.contains(tag))
