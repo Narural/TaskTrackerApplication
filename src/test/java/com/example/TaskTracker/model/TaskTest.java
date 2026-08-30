@@ -32,7 +32,7 @@ public class TaskTest {
     void addTag_tagAddsAndContains_isTrue(){
         Task task = new Task("title", TaskPriority.HIGH, "description");
         task.addTag("rawr");
-        assertThat(task.getTags().contains("rawr"));
+        assertThat(task.getTags()).contains("rawr");
     }
 
     @Test

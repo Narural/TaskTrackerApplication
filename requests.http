@@ -1,0 +1,140 @@
+### Трекер задач — запросы для ручной проверки
+### Выполняются прямо из IntelliJ: значок ▶ слева от запроса.
+
+@host = http://localhost:8080
+@taskId = 1
+
+### ---------- Список и фильтры ----------
+
+### Все задачи
+GET {{host}}/api/tasks
+
+### Постранично
+GET {{host}}/api/tasks?page=0&size=5
+
+### Сортировка
+GET {{host}}/api/tasks?sort=createdAt,desc
+
+### Фильтр по статусу
+GET {{host}}/api/tasks?status=NEW
+
+### Фильтр по статусу и приоритету
+GET {{host}}/api/tasks?status=NEW&priority=HIGH
+
+### Поиск по части названия, регистр не важен
+GET {{host}}/api/tasks?title=отч
+
+### Все три фильтра сразу
+GET {{host}}/api/tasks?status=NEW&priority=HIGH&title=отч
+
+### Фильтр без совпадений — ожидаем 200 и пустой список, не 404
+GET {{host}}/api/tasks?status=CANCELED
+
+### Неизвестное значение статуса — ожидаем 400, не 500
+GET {{host}}/api/tasks?status=НЕТ_ТАКОГО
+
+### Несуществующее поле сортировки — ожидаем 400, не 500
+GET {{host}}/api/tasks?sort=nosuchfield,asc
+
+### ---------- Одна задача ----------
+
+### Задача по id
+GET {{host}}/api/tasks/{{taskId}}
+
+### Несуществующий id — ожидаем 404
+GET {{host}}/api/tasks/999999
+
+### Создать задачу
+POST {{host}}/api/tasks
+Content-Type: application/json
+
+{
+  "title": "Квартальный отчёт",
+  "priority": "HIGH",
+  "description": "Свести цифры за квартал"
+}
+
+### Создание с пустым названием — ожидаем 400
+POST {{host}}/api/tasks
+Content-Type: application/json
+
+{
+  "title": "",
+  "priority": "HIGH",
+  "description": "x"
+}
+
+### Создание игнорирует id и status от клиента
+POST {{host}}/api/tasks
+Content-Type: application/json
+
+{
+  "id": 999,
+  "status": "DONE",
+  "title": "Хитрая",
+  "priority": "LOW",
+  "description": "id и status должны быть проигнорированы"
+}
+
+### Удалить задачу — ожидаем 204
+DELETE {{host}}/api/tasks/{{taskId}}
+
+### ---------- Статус и приоритет ----------
+
+### Разрешённый переход NEW -> IN_PROCESS
+PATCH {{host}}/api/tasks/{{taskId}}/status
+Content-Type: application/json
+
+{
+  "status": "IN_PROCESS"
+}
+
+### Запрещённый переход NEW -> DONE — ожидаем 400
+PATCH {{host}}/api/tasks/{{taskId}}/status
+Content-Type: application/json
+
+{
+  "status": "DONE"
+}
+
+### Сменить приоритет
+PATCH {{host}}/api/tasks/{{taskId}}/priority
+Content-Type: application/json
+
+{
+  "priority": "CRITICAL"
+}
+
+### ---------- Теги ----------
+
+### Добавить тег — ожидаем 201
+POST {{host}}/api/tasks/{{taskId}}/tags
+Content-Type: application/json
+
+{
+  "tag": "backend"
+}
+
+### Повторный тот же тег — ожидаем 409
+POST {{host}}/api/tasks/{{taskId}}/tags
+Content-Type: application/json
+
+{
+  "tag": "backend"
+}
+
+### Удалить тег — ожидаем 204 и пустое тело
+DELETE {{host}}/api/tasks/{{taskId}}/tags/backend
+
+### Удалить несуществующий тег — ожидаем 404
+DELETE {{host}}/api/tasks/{{taskId}}/tags/nosuchtag
+
+### ---------- Статистика ----------
+
+### Все статусы и приоритеты присутствуют, пустые — с нулями
+GET {{host}}/api/tasks/statistic
+
+### ---------- Прочее ----------
+
+### Несуществующий путь — ожидаем 404, не 500
+GET {{host}}/api/nosuchpath

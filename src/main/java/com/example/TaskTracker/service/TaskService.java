@@ -24,8 +24,9 @@ public class TaskService {
         return taskRepository.findById(id).orElseThrow(FoundTaskException::new);
     }
     @Transactional(readOnly = true)
-    public Page<TaskResponse> getAllTasks(Pageable pageable){
-        return taskRepository.findAll(pageable).map(TaskResponse::new);
+    public Page<TaskResponse> search(TaskStatus status, TaskPriority priority,
+                                     String title, Pageable pageable){
+        return taskRepository.search(status, priority, title, pageable).map(TaskResponse::new);
     }
     @Transactional(readOnly = true)
     public TaskResponse getTaskById(long id){
@@ -74,22 +75,4 @@ public class TaskService {
                 taskRepository.countGroupedByStatus(),
                 taskRepository.countGroupedByPriority());
     }
-    @Transactional(readOnly = true)
-    public Page<TaskResponse> findByStatus(TaskStatus status, Pageable pageable){
-        return taskRepository.findByStatus(status, pageable).map(TaskResponse::new);
-    }
-    @Transactional(readOnly = true)
-    public Page<TaskResponse> findByStatusAndPriority(TaskStatus status,
-                                                      TaskPriority priority,
-                                                      Pageable pageable){
-        return taskRepository.findByStatusAndPriority
-                (status, priority, pageable).map(TaskResponse::new);
-    }
-    @Transactional(readOnly = true)
-    public Page<TaskResponse> findByTitleContainingIgnoreCase(String title,
-                                                              Pageable pageable){
-        return taskRepository.findByTitleContainingIgnoreCase
-                (title, pageable).map(TaskResponse::new);
-    }
-
 }

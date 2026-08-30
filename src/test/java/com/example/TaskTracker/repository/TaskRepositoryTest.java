@@ -48,8 +48,7 @@ public class    TaskRepositoryTest {
     void findByTitleContainingIgnoreCase_diffCases_findTasks(){
         taskRepository.save(new Task("ТЕсты", TaskPriority.HIGH, "a"));
         taskRepository.save(new Task("тесты", TaskPriority.HIGH, "a"));
-        var found = taskRepository.findByTitleContainingIgnoreCase
-                ("Тесты", PageRequest.of(0, 10));
+        var found = taskRepository.search(null, null, "Тесты", PageRequest.of(0, 10));
         assertThat(found.getTotalElements()).isEqualTo(2);
         assertThat(found.getContent())
                 .extracting(Task::getTitle)
@@ -62,8 +61,7 @@ public class    TaskRepositoryTest {
         Task task2 = taskRepository.save(new Task("тесты", TaskPriority.HIGH, "a"));
         Task task3 = taskRepository.save(new Task("теfffсты", TaskPriority.HIGH, "a"));
         ReflectionTestUtils.setField(task3, "status", TaskStatus.DONE);
-        var found = taskRepository.findByStatus
-                (TaskStatus.NEW, PageRequest.of(0, 10));
+        var found = taskRepository.search(TaskStatus.NEW, null, null, PageRequest.of(0, 10));
         assertThat(found.getTotalElements()).isEqualTo(2);
         assertThat(found.getContent())
                 .extracting(Task::getTitle)

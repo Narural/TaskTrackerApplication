@@ -1,15 +1,16 @@
 package com.example.TaskTracker.controller;
 
-import com.example.TaskTracker.model.TaskPriority;
-import com.example.TaskTracker.model.TaskStatus;
+import com.example.TaskTracker.dto.AddTagRequest;
 import com.example.TaskTracker.dto.ChangePriorityRequest;
 import com.example.TaskTracker.dto.ChangeStatusRequest;
 import com.example.TaskTracker.dto.CreateTaskRequest;
+import com.example.TaskTracker.dto.PageResponse;
 import com.example.TaskTracker.dto.TaskResponse;
 import com.example.TaskTracker.dto.TaskStatistic;
+import com.example.TaskTracker.model.TaskPriority;
+import com.example.TaskTracker.model.TaskStatus;
 import com.example.TaskTracker.service.TaskService;
 import jakarta.validation.Valid;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,77 +18,76 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.util.List;
-import com.example.TaskTracker.dto.AddTagRequest;
+
 @RestController
-@RequestMapping("/api/task")
+@RequestMapping("/api/tasks")
 public class TaskController {
+
     private final TaskService taskService;
 
     public TaskController(TaskService taskService) {
         this.taskService = taskService;
     }
+
+    /**
+     * Список задач с необязательными фильтрами.
+     * Раньше на это было три отдельных адреса, а неизвестный параметр молча игнорировался.
+     */
     @GetMapping
-    public ResponseEntity<Page<TaskResponse>> getAllTasks(Pageable pageable){
-        return ResponseEntity.ok(taskService.getAllTasks(pageable));
+    public ResponseEntity<PageResponse<TaskResponse>> getTasks(
+            @RequestParam(required = false) TaskStatus status,
+            @RequestParam(required = false) TaskPriority priority,
+            @RequestParam(required = false) String title,
+            Pageable pageable) {
+        return ResponseEntity.ok(
+                new PageResponse<>(taskService.search(status, priority, title, pageable)));
     }
+
     @GetMapping("/{id}")
-    public ResponseEntity<TaskResponse> getTaskById(@PathVariable long id){
+    public ResponseEntity<TaskResponse> getTaskById(@PathVariable long id) {
         return ResponseEntity.ok(taskService.getTaskById(id));
     }
+
     @PostMapping
-    public ResponseEntity<TaskResponse> createTask(@Valid @RequestBody
-                                                   CreateTaskRequest request){
-        TaskResponse newTask = taskService.createTask(request.getTitle(), request.getPriority(), request.getDescription());
-        URI location = URI.create("/api/task/" + newTask.getId());
+    public ResponseEntity<TaskResponse> createTask(@Valid @RequestBody CreateTaskRequest request) {
+        TaskResponse newTask = taskService.createTask(
+                request.getTitle(), request.getPriority(), request.getDescription());
+        URI location = URI.create("/api/tasks/" + newTask.getId());
         return ResponseEntity.created(location).body(newTask);
     }
+
     @PatchMapping("/{id}/status")
-    public ResponseEntity<TaskResponse> changeStatus(@Valid @RequestBody
-                                                         ChangeStatusRequest request,
-                                             @PathVariable long id){
+    public ResponseEntity<TaskResponse> changeStatus(@Valid @RequestBody ChangeStatusRequest request,
+                                                     @PathVariable long id) {
         return ResponseEntity.ok(taskService.changeStatus(TaskStatus.valueOf(request.getStatus()), id));
     }
+
     @PatchMapping("/{id}/priority")
-    public ResponseEntity<TaskResponse> changePriority(@Valid @RequestBody
-                                                           ChangePriorityRequest request,
-                                               @PathVariable long id){
+    public ResponseEntity<TaskResponse> changePriority(@Valid @RequestBody ChangePriorityRequest request,
+                                                       @PathVariable long id) {
         return ResponseEntity.ok(taskService.changePriority(TaskPriority.valueOf(request.getPriority()), id));
     }
-    @PostMapping("/{id}/tags")
-    public ResponseEntity<List<String>> addTag(@Valid @RequestBody AddTagRequest tagRequest, @PathVariable long id){
-        return ResponseEntity.status(HttpStatus.CREATED).
-                body(taskService.addTag(tagRequest.getTag(), id));
-    }
-    @DeleteMapping("/{id}/tags/{tag}")
-    public ResponseEntity<List<String>> removeTag(@PathVariable long id, @PathVariable String tag){
 
-        return ResponseEntity.ok(taskService.removeTag(tag, id));
+    @PostMapping("/{id}/tags")
+    public ResponseEntity<List<String>> addTag(@Valid @RequestBody AddTagRequest tagRequest,
+                                               @PathVariable long id) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(taskService.addTag(tagRequest.getTag(), id));
     }
+
+    @DeleteMapping("/{id}/tags/{tag}")
+    public ResponseEntity<Void> removeTag(@PathVariable long id, @PathVariable String tag) {
+        taskService.removeTag(tag, id);
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTask(@PathVariable long id){
+    public ResponseEntity<Void> deleteTask(@PathVariable long id) {
         taskService.deleteTask(id);
         return ResponseEntity.noContent().build();
     }
+
     @GetMapping("/statistic")
     public ResponseEntity<TaskStatistic> showStatistic() {
         return ResponseEntity.ok(taskService.getStatistic());
-    }
-    @GetMapping("/byStatus")
-    public ResponseEntity<Page<TaskResponse>> findByStatus(
-             @RequestParam TaskStatus status, Pageable pageable){
-        return ResponseEntity.ok(taskService.findByStatus(status, pageable));
-    }
-    @GetMapping("/byStatusAndPriority")
-    public ResponseEntity<Page<TaskResponse>> findByStatus(
-                                                       @RequestParam TaskStatus status,
-                                                   @RequestParam TaskPriority priority,
-                                                           Pageable pageable){
-        return ResponseEntity.ok(
-                taskService.findByStatusAndPriority(status, priority, pageable));
-    }
-    @GetMapping("/byTitle")
-    public ResponseEntity<Page<TaskResponse>> findByTitle(@Valid String title,
-                                                          Pageable pageable){
-        return ResponseEntity.ok(taskService.findByTitleContainingIgnoreCase(title, pageable));
     }
 }

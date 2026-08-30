@@ -17,7 +17,7 @@ public class TaskApiIntegrationTest extends AbstractIntegrationTest {
     @Test
     @DisplayName("Полный путь: создать -> прочитать -> сменить статус -> увидеть в списке")
     void fullPath_createReadChangeStatus_showsNewStatus(){
-        Map<String, Object> created= rest.post().uri("/api/task")
+        Map<String, Object> created= rest.post().uri("/api/tasks")
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("title", "Test",
                         "priority", "HIGH",
@@ -29,18 +29,18 @@ public class TaskApiIntegrationTest extends AbstractIntegrationTest {
                 .returnResult().getResponseBody();
 
         long id = ((Number)created.get("id")).longValue();
-        rest.get().uri("/api/task/{id}", id)
+        rest.get().uri("/api/tasks/{id}", id)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath("$.title").isEqualTo("Test")
                 .jsonPath("$.status").isEqualTo("NEW");
-        rest.patch().uri("/api/task/{id}/status", id)
+        rest.patch().uri("/api/tasks/{id}/status", id)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("status", "IN_PROCESS"))
                 .exchange()
                 .expectStatus().isOk();
-        rest.get().uri("/api/task")
+        rest.get().uri("/api/tasks")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -52,7 +52,7 @@ public class TaskApiIntegrationTest extends AbstractIntegrationTest {
     @Test
     @DisplayName("Повторный тэг выдаёт 409, в базе 1 строка")
     void addTag_addDuplicateTag_409InDbNoNewTag(){
-        Map<String, Object> created= rest.post().uri("/api/task")
+        Map<String, Object> created= rest.post().uri("/api/tasks")
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("title", "Test",
                         "priority", "HIGH",
@@ -63,12 +63,12 @@ public class TaskApiIntegrationTest extends AbstractIntegrationTest {
                 .expectBody(Map.class)
                 .returnResult().getResponseBody();
         long id = ((Number) created.get("id")).longValue();
-        rest.post().uri("/api/task/{id}/tags", id)
+        rest.post().uri("/api/tasks/{id}/tags", id)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("tag", "test"))
                 .exchange()
                 .expectStatus().isCreated();
-        rest.post().uri("/api/task/{id}/tags", id)
+        rest.post().uri("/api/tasks/{id}/tags", id)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("tag", "test"))
                 .exchange()
@@ -79,7 +79,7 @@ public class TaskApiIntegrationTest extends AbstractIntegrationTest {
     }
     @Test
     void deleteTask_deletesTagsToo_204NoTaskNoTags(){
-        Map<String, Object> created= rest.post().uri("/api/task")
+        Map<String, Object> created= rest.post().uri("/api/tasks")
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("title", "Test",
                         "priority", "HIGH",
@@ -90,17 +90,17 @@ public class TaskApiIntegrationTest extends AbstractIntegrationTest {
                 .expectBody(Map.class)
                 .returnResult().getResponseBody();
         long id = ((Number) created.get("id")).longValue();
-        rest.post().uri("/api/task/{id}/tags", id)
+        rest.post().uri("/api/tasks/{id}/tags", id)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("tag", "test"))
                 .exchange()
                 .expectStatus().isCreated();
-        rest.delete().uri("/api/task/{id}", id).exchange()
+        rest.delete().uri("/api/tasks/{id}", id).exchange()
                 .expectStatus()
                 .isNoContent();
         Long countTags = jdbcTemplate.queryForObject("select count(*) from task_tags where task_id = ?", Long.class, id);
         assertThat(countTags).isEqualTo(0);
-        rest.get().uri("api/task/{id}", id)
+        rest.get().uri("api/tasks/{id}", id)
                 .exchange()
                 .expectStatus().isNotFound();
     }
@@ -108,7 +108,7 @@ public class TaskApiIntegrationTest extends AbstractIntegrationTest {
     @Test
     @DisplayName("Статистика на пустой базе: все статусы присутствуют с нулями")
     void getStatistic_emptyDatabase_returnsAllStatusesWithZero(){
-        rest.get().uri("/api/task/statistic")
+        rest.get().uri("/api/tasks/statistic")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -125,7 +125,7 @@ public class TaskApiIntegrationTest extends AbstractIntegrationTest {
     void changeStatus_forbiddenTransition_returns400AndDatabaseUnchanged(){
         long id = createTask("Test", "HIGH", "Test");
 
-        rest.patch().uri("/api/task/{id}/status", id)
+        rest.patch().uri("/api/tasks/{id}/status", id)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("status", "DONE"))
                 .exchange()
@@ -139,7 +139,7 @@ public class TaskApiIntegrationTest extends AbstractIntegrationTest {
     @Test
     @DisplayName("Несуществующее поле сортировки даёт 400, а не 500")
     void getAllTasks_unknownSortProperty_returns400NotServerError(){
-        rest.get().uri("/api/task?sort=nosuchfield,asc")
+        rest.get().uri("/api/tasks?sort=nosuchfield,asc")
                 .exchange()
                 .expectStatus().isBadRequest()
                 .expectBody()
@@ -147,7 +147,7 @@ public class TaskApiIntegrationTest extends AbstractIntegrationTest {
     }
 
     private long createTask(String title, String priority, String description){
-        Map<String, Object> created = rest.post().uri("/api/task")
+        Map<String, Object> created = rest.post().uri("/api/tasks")
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("title", title, "priority", priority, "description", description))
                 .exchange()

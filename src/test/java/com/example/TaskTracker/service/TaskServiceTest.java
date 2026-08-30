@@ -130,54 +130,34 @@ public class TaskServiceTest {
         verify(taskRepository).findById(1L);
         verifyNoMoreInteractions(taskRepository);
     }
-    @Test
-    void findByStatus_matchingTasks_returnsMappedResponse(){
-
-            Pageable pageable = PageRequest.of(0, 20);
-            Task task = new Task("Отчёт", TaskPriority.HIGH, "квартальный");
-
-            when(taskRepository.findByStatus(TaskStatus.NEW, pageable))
-                    .thenReturn(new PageImpl<>(List.of(task), pageable, 1));
-
-            Page<TaskResponse> result = taskService.findByStatus(TaskStatus.NEW, pageable);
-
-            assertThat(result.getContent())
-                    .extracting(TaskResponse::getTitle)
-                    .containsExactly("Отчёт");
-            assertThat(result.getContent())
-                    .extracting(TaskResponse::getStatus)
-                    .containsExactly(TaskStatus.NEW);
-            assertThat(result.getTotalElements()).isEqualTo(1);
-        }
-
 
     @Test
-    void findByStatusAndPriority_matchingTasks_returnsMappedResponses(){
+    void search_byStatus_returnsMappedResponsesAndKeepsPagingMetadata(){
         Pageable pageable = PageRequest.of(0, 20);
         Task task = new Task("Отчёт", TaskPriority.HIGH, "квартальный");
-        when(taskRepository.findByStatusAndPriority(TaskStatus.NEW, TaskPriority.HIGH, pageable))
+        when(taskRepository.search(TaskStatus.NEW, null, null, pageable))
                 .thenReturn(new PageImpl<>(List.of(task), pageable, 1));
 
-        Page<TaskResponse> result =
-                taskService.findByStatusAndPriority(TaskStatus.NEW, TaskPriority.HIGH, pageable);
+        Page<TaskResponse> result = taskService.search(TaskStatus.NEW, null, null, pageable);
 
         assertThat(result.getContent())
-                .extracting(TaskResponse::getPriority).containsExactly(TaskPriority.HIGH);
+                .extracting(TaskResponse::getTitle).containsExactly("Отчёт");
+        assertThat(result.getContent())
+                .extracting(TaskResponse::getStatus).containsExactly(TaskStatus.NEW);
         assertThat(result.getTotalElements()).isEqualTo(1);
     }
 
     @Test
-    void findByTitleContainingIgnoreCase_matchingTitle_returnsMappedResponses(){
+    void search_allFiltersNull_stillMapsEntitiesToResponses(){
         Pageable pageable = PageRequest.of(0, 20);
         Task task = new Task("Отчёт", TaskPriority.HIGH, "квартальный");
-        when(taskRepository.findByTitleContainingIgnoreCase("отч", pageable))
+        when(taskRepository.search(null, null, null, pageable))
                 .thenReturn(new PageImpl<>(List.of(task), pageable, 1));
 
-        Page<TaskResponse> result =
-                taskService.findByTitleContainingIgnoreCase("отч", pageable);
+        Page<TaskResponse> result = taskService.search(null, null, null, pageable);
 
         assertThat(result.getContent())
-                .extracting(TaskResponse::getTitle).containsExactly("Отчёт");
+                .extracting(TaskResponse::getPriority).containsExactly(TaskPriority.HIGH);
         assertThat(result.getTotalElements()).isEqualTo(1);
     }
 }
