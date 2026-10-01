@@ -20,7 +20,17 @@ public abstract class AbstractIntegrationTest {
     static {
         postgres.start();
     }
+    protected static final String USER = "Arrer";
+    protected static final String USER_PASS = "Tpass";
+    protected static final String ADMIN = "Naru";
+    protected static final String ADMIN_PASS = "testpass";
 
+    @BeforeEach
+    void authenticateAsUser() {
+        rest = rest.mutate()
+                .defaultHeaders(h -> h.setBasicAuth(USER, USER_PASS))
+                .build();
+    }
     @Autowired protected RestTestClient rest;
     @Autowired protected TaskRepository taskRepository;
     @Autowired protected JdbcTemplate jdbcTemplate;
