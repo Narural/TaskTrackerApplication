@@ -129,7 +129,7 @@ public class    TaskRepositoryTest {
                 "select count(*) from flyway_schema_history where success = false",
                 Long.class);
 
-        assertThat(applied).containsExactly("1", "2", "3");
+        assertThat(applied).containsExactly("1", "2", "3", "4");
         assertThat(failed).isZero();
     }
     @Test
