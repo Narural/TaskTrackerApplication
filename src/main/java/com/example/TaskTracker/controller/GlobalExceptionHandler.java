@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import org.springframework.security.core.AuthenticationException;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -35,6 +37,13 @@ public class GlobalExceptionHandler {
                                                           HttpServletRequest request) {
         return error(HttpStatus.NOT_FOUND, "TASK_NOT_FOUND", e.getMessage(), request);
     }
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleBadCredentials(AuthenticationException e,
+                                                              HttpServletRequest request) {
+        return error(HttpStatus.UNAUTHORIZED, "BAD_CREDENTIALS",
+                "Неверное имя пользователя или пароль", request);
+    }
+
 
     @ExceptionHandler(ChangeStatusException.class)
     public ResponseEntity<ErrorResponse> changeStatusHandler(ChangeStatusException e,

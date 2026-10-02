@@ -1,5 +1,7 @@
 package com.example.TaskTracker.controller;
 
+import com.example.TaskTracker.dto.LoginRequest;
+import com.example.TaskTracker.dto.LoginResponse;
 import com.example.TaskTracker.dto.RegistrationRequest;
 import com.example.TaskTracker.dto.UserResponse;
 import com.example.TaskTracker.service.AuthService;
@@ -24,5 +26,9 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(@Valid @RequestBody RegistrationRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
+    }
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(authService.login(request));
     }
 }
