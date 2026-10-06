@@ -26,9 +26,9 @@ class TransactionRollbackTest extends AbstractIntegrationTest {
         assertThatThrownBy(() ->
                 transactionTemplate.executeWithoutResult(status -> {
                     TaskResponse task = taskService.createTask(
-                            "Откат", TaskPriority.HIGH, "две операции");
-                    taskService.addTag("dup", task.getId());
-                    taskService.addTag("dup", task.getId());
+                            "Откат", TaskPriority.HIGH, "две операции", USER);
+                    taskService.addTag("dup", task.getId(), USER);
+                    taskService.addTag("dup", task.getId(), USER);
                 })
         ).isInstanceOf(ExistingTagException.class);
 
@@ -49,7 +49,7 @@ class TransactionRollbackTest extends AbstractIntegrationTest {
     void createTaskWithTagsThenFail_failsAfterWrites_leavesNothingInDatabase(){
 
         assertThatThrownBy(() -> failingTaskOperations.createTaskWithTagsThenFail(
-                "Откат", TaskPriority.HIGH, "две операции"))
+                "Откат", TaskPriority.HIGH, "две операции", USER))
                 .isInstanceOf(IllegalStateException.class);
 
         Long tasks = jdbcTemplate.queryForObject("select count(*) from tasks", Long.class);

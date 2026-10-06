@@ -42,7 +42,7 @@ public abstract class AbstractIntegrationTest {
     protected RestTestClient anonymous;
 
     @BeforeEach
-    void prepare() {
+    protected void prepare() {
         taskRepository.deleteAll();
         userRepository.deleteAll();
 

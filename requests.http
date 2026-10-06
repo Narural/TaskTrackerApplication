@@ -1,140 +1,255 @@
 ### Трекер задач — запросы для ручной проверки
-### Выполняются прямо из IntelliJ: значок ▶ слева от запроса.
+### Выполняются из IntelliJ: значок ▶ слева от запроса. Запускать сверху вниз —
+### раздел 0 регистрирует двух пользователей, входит и запоминает токены и id задач.
 
 @host = http://localhost:8080
-@taskId = 1
 
-### ---------- Список и фильтры ----------
+### ===================== 0. Пользователи и вход =====================
 
-### Все задачи
+### Регистрация anna — 201 (при повторном запуске 409: имя занято)
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{"username": "anna", "password": "password1"}
+
+### Регистрация bob — 201
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{"username": "bob", "password": "password2"}
+
+### Вход anna — 200 с токеном; токен запоминается в {{annaToken}}
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{"username": "anna", "password": "password1"}
+
+> {% client.global.set("annaToken", response.body.token); %}
+
+### Вход bob — 200; токен в {{bobToken}}
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{"username": "bob", "password": "password2"}
+
+> {% client.global.set("bobToken", response.body.token); %}
+
+### Вход администратора — 200; токен в {{adminToken}}
+### Администратор через API не создаётся (регистрация всегда даёт USER) — см. README, раздел «Доступ».
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{"username": "admin", "password": "adminpass123"}
+
+> {% client.global.set("adminToken", response.body.token); %}
+
+### Кто я — 200, роль USER, пароля в ответе нет
+GET {{host}}/api/me
+Authorization: Bearer {{annaToken}}
+
+### Задача anna — 201; id в {{annaTaskId}}
+POST {{host}}/api/tasks
+Authorization: Bearer {{annaToken}}
+Content-Type: application/json
+
+{"title": "Квартальный отчёт", "priority": "HIGH", "description": "Свести цифры за квартал"}
+
+> {% client.global.set("annaTaskId", response.body.id); %}
+
+### Задача bob — 201; id в {{bobTaskId}}
+POST {{host}}/api/tasks
+Authorization: Bearer {{bobToken}}
+Content-Type: application/json
+
+{"title": "Задача Боба", "priority": "LOW", "description": "чужая для anna"}
+
+> {% client.global.set("bobTaskId", response.body.id); %}
+
+### ===================== 1. Список и фильтры (свои задачи) =====================
+
+### Мои задачи — только задачи anna
 GET {{host}}/api/tasks
+Authorization: Bearer {{annaToken}}
 
 ### Постранично
 GET {{host}}/api/tasks?page=0&size=5
+Authorization: Bearer {{annaToken}}
 
 ### Сортировка
 GET {{host}}/api/tasks?sort=createdAt,desc
-
-### Фильтр по статусу
-GET {{host}}/api/tasks?status=NEW
+Authorization: Bearer {{annaToken}}
 
 ### Фильтр по статусу и приоритету
 GET {{host}}/api/tasks?status=NEW&priority=HIGH
+Authorization: Bearer {{annaToken}}
 
 ### Поиск по части названия, регистр не важен
 GET {{host}}/api/tasks?title=отч
+Authorization: Bearer {{annaToken}}
 
-### Все три фильтра сразу
-GET {{host}}/api/tasks?status=NEW&priority=HIGH&title=отч
-
-### Фильтр без совпадений — ожидаем 200 и пустой список, не 404
+### Фильтр без совпадений — 200 и пустой список, не 404
 GET {{host}}/api/tasks?status=CANCELED
+Authorization: Bearer {{annaToken}}
 
-### Неизвестное значение статуса — ожидаем 400, не 500
+### Неизвестное значение статуса — 400, не 500
 GET {{host}}/api/tasks?status=НЕТ_ТАКОГО
+Authorization: Bearer {{annaToken}}
 
-### Несуществующее поле сортировки — ожидаем 400, не 500
+### Несуществующее поле сортировки — 400, не 500
 GET {{host}}/api/tasks?sort=nosuchfield,asc
+Authorization: Bearer {{annaToken}}
 
-### ---------- Одна задача ----------
+### ===================== 2. Своя задача =====================
 
-### Задача по id
-GET {{host}}/api/tasks/{{taskId}}
+### Задача по id — 200
+GET {{host}}/api/tasks/{{annaTaskId}}
+Authorization: Bearer {{annaToken}}
 
-### Несуществующий id — ожидаем 404
+### Несуществующий id — 404
 GET {{host}}/api/tasks/999999
+Authorization: Bearer {{annaToken}}
 
-### Создать задачу
+### Создание с пустым названием — 400
 POST {{host}}/api/tasks
+Authorization: Bearer {{annaToken}}
 Content-Type: application/json
 
-{
-  "title": "Квартальный отчёт",
-  "priority": "HIGH",
-  "description": "Свести цифры за квартал"
-}
+{"title": "", "priority": "HIGH", "description": "x"}
 
-### Создание с пустым названием — ожидаем 400
+### Создание игнорирует id, status и owner от клиента — владелец anna
 POST {{host}}/api/tasks
+Authorization: Bearer {{annaToken}}
 Content-Type: application/json
 
-{
-  "title": "",
-  "priority": "HIGH",
-  "description": "x"
-}
+{"id": 999, "status": "DONE", "owner": "bob", "title": "Хитрая", "priority": "LOW", "description": "x"}
 
-### Создание игнорирует id и status от клиента
-POST {{host}}/api/tasks
+### Разрешённый переход NEW -> IN_PROCESS — 200
+PATCH {{host}}/api/tasks/{{annaTaskId}}/status
+Authorization: Bearer {{annaToken}}
 Content-Type: application/json
 
-{
-  "id": 999,
-  "status": "DONE",
-  "title": "Хитрая",
-  "priority": "LOW",
-  "description": "id и status должны быть проигнорированы"
-}
+{"status": "IN_PROCESS"}
 
-### Удалить задачу — ожидаем 204
-DELETE {{host}}/api/tasks/{{taskId}}
-
-### ---------- Статус и приоритет ----------
-
-### Разрешённый переход NEW -> IN_PROCESS
-PATCH {{host}}/api/tasks/{{taskId}}/status
+### Запрещённый переход IN_PROCESS -> NEW — 400
+PATCH {{host}}/api/tasks/{{annaTaskId}}/status
+Authorization: Bearer {{annaToken}}
 Content-Type: application/json
 
-{
-  "status": "IN_PROCESS"
-}
+{"status": "NEW"}
 
-### Запрещённый переход NEW -> DONE — ожидаем 400
-PATCH {{host}}/api/tasks/{{taskId}}/status
+### Сменить приоритет — 200
+PATCH {{host}}/api/tasks/{{annaTaskId}}/priority
+Authorization: Bearer {{annaToken}}
 Content-Type: application/json
 
-{
-  "status": "DONE"
-}
+{"priority": "CRITICAL"}
 
-### Сменить приоритет
-PATCH {{host}}/api/tasks/{{taskId}}/priority
+### Добавить тег — 201
+POST {{host}}/api/tasks/{{annaTaskId}}/tags
+Authorization: Bearer {{annaToken}}
 Content-Type: application/json
 
-{
-  "priority": "CRITICAL"
-}
+{"tag": "backend"}
 
-### ---------- Теги ----------
-
-### Добавить тег — ожидаем 201
-POST {{host}}/api/tasks/{{taskId}}/tags
+### Повторный тот же тег — 409
+POST {{host}}/api/tasks/{{annaTaskId}}/tags
+Authorization: Bearer {{annaToken}}
 Content-Type: application/json
 
-{
-  "tag": "backend"
-}
+{"tag": "backend"}
 
-### Повторный тот же тег — ожидаем 409
-POST {{host}}/api/tasks/{{taskId}}/tags
-Content-Type: application/json
+### Фильтр по тегу — только свои задачи с этим тегом
+GET {{host}}/api/tasks?tag=backend
+Authorization: Bearer {{annaToken}}
 
-{
-  "tag": "backend"
-}
+### Удалить тег — 204 и пустое тело
+DELETE {{host}}/api/tasks/{{annaTaskId}}/tags/backend
+Authorization: Bearer {{annaToken}}
 
-### Удалить тег — ожидаем 204 и пустое тело
-DELETE {{host}}/api/tasks/{{taskId}}/tags/backend
+### Удалить несуществующий тег — 404
+DELETE {{host}}/api/tasks/{{annaTaskId}}/tags/nosuchtag
+Authorization: Bearer {{annaToken}}
 
-### Удалить несуществующий тег — ожидаем 404
-DELETE {{host}}/api/tasks/{{taskId}}/tags/nosuchtag
-
-### ---------- Статистика ----------
-
-### Все статусы и приоритеты присутствуют, пустые — с нулями
+### Статистика — только по своим задачам
 GET {{host}}/api/tasks/statistic
+Authorization: Bearer {{annaToken}}
 
-### ---------- Прочее ----------
+### ===================== 3. Администратор =====================
 
-### Несуществующий путь — ожидаем 404, не 500
+### Все задачи всех пользователей — 200 для ADMIN
+GET {{host}}/api/admin/tasks
+Authorization: Bearer {{adminToken}}
+
+### ===================== 4. Запрещено — попытки добраться до чужого =====================
+
+### Чужая задача по id — 404, как несуществующая
+GET {{host}}/api/tasks/{{bobTaskId}}
+Authorization: Bearer {{annaToken}}
+
+### Изменить чужую задачу — 404, в базе без изменений
+PATCH {{host}}/api/tasks/{{bobTaskId}}/status
+Authorization: Bearer {{annaToken}}
+Content-Type: application/json
+
+{"status": "IN_PROCESS"}
+
+### Добавить тег чужой задаче — 404
+POST {{host}}/api/tasks/{{bobTaskId}}/tags
+Authorization: Bearer {{annaToken}}
+Content-Type: application/json
+
+{"tag": "hacked"}
+
+### Удалить чужую задачу — 404, задача остаётся
+DELETE {{host}}/api/tasks/{{bobTaskId}}
+Authorization: Bearer {{annaToken}}
+
+### Админский список под ролью USER — 403
+GET {{host}}/api/admin/tasks
+Authorization: Bearer {{annaToken}}
+
+### Без токена — 401
+GET {{host}}/api/tasks
+
+### Создать без токена — 401
+POST {{host}}/api/tasks
+Content-Type: application/json
+
+{"title": "Аноним", "priority": "LOW", "description": "x"}
+
+### Мусор вместо токена — 401
+GET {{host}}/api/tasks
+Authorization: Bearer abc.def.ghi
+
+### Неверный пароль — 401, тот же ответ, что на несуществующее имя
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{"username": "anna", "password": "wrong-password"}
+
+### Несуществующее имя — 401
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{"username": "ghost", "password": "whatever123"}
+
+### Регистрация с занятым именем — 409
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{"username": "anna", "password": "password1"}
+
+### Регистрация с коротким паролем — 400
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{"username": "carol", "password": "1234567"}
+
+### Несуществующий путь — 401 (закрыт denyAll ещё до проверки адреса)
 GET {{host}}/api/nosuchpath
+
+### ===================== 5. Уборка =====================
+
+### Удалить свою задачу — 204
+DELETE {{host}}/api/tasks/{{annaTaskId}}
+Authorization: Bearer {{annaToken}}

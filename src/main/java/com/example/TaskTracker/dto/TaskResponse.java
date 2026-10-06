@@ -16,6 +16,7 @@ public class TaskResponse {
     private final TaskStatus status;
     private final LocalDateTime createdAt;
     private final Set<String> tags;
+    private final String owner;
 
     public TaskResponse(Task task) {
         this.id = task.getId();
@@ -25,6 +26,11 @@ public class TaskResponse {
         this.status = task.getStatus();
         this.createdAt = task.getCreatedAt();
         this.tags = new HashSet<>(task.getTags());
+        this.owner = task.getOwner() != null ? task.getOwner().getUsername() : null;
+    }
+
+    public String getOwner() {
+        return owner;
     }
 
     public Long getId() {

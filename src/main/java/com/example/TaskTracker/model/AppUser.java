@@ -1,10 +1,12 @@
 package com.example.TaskTracker.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.time.Instant;
 @Entity
 @Table(name = "users")
+@BatchSize(size = 20)
 
 public class AppUser {
     @Id

@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,13 @@ public class AuthService {
         String hash = encoder.encode(request.getPassword());
         AppUser user = new AppUser(request.getUsername(), hash, Role.USER);
         return new UserResponse(userRepository.save(user));
+    }
+
+    @Transactional(readOnly = true)
+    public UserResponse me(String username){
+        return userRepository.findByUsername(username)
+                .map(UserResponse::new)
+                .orElseThrow(() -> new UsernameNotFoundException("Пользователь не найден"));
     }
 
     public LoginResponse login(LoginRequest request){

@@ -62,8 +62,12 @@ public class SecurityConfig {
                         .authenticationEntryPoint(unauthenticated)
                         .accessDeniedHandler(accessDenied))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
-                        .requestMatchers("/api/tasks/statistic").hasRole("ADMIN")
+                        // открыто ровно два адреса — войти и зарегистрироваться можно только до того, как ты кто-то
+                        .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
+                        // цепочка — грубая линия по URL; роль ADMIN проверяет @PreAuthorize на методе
+                        .requestMatchers("/api/admin/**").authenticated()
+                        .requestMatchers("/api/me").authenticated()
+                        // владение задачами решает сервис, цепочка только требует входа
                         .requestMatchers("/api/tasks/**").authenticated()
                         .anyRequest().denyAll())
                 .build();

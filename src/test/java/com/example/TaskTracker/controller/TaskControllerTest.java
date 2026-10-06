@@ -9,10 +9,13 @@ import com.example.TaskTracker.exception.NotExistingTagExceptions;
 import com.example.TaskTracker.model.Task;
 import com.example.TaskTracker.model.TaskPriority;
 import com.example.TaskTracker.model.TaskStatus;
+import com.example.TaskTracker.security.SecurityConfig;
 import com.example.TaskTracker.service.TaskService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +30,8 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 @WebMvcTest(TaskController.class)
+@Import(SecurityConfig.class)
+@WithMockUser(username = "user")
 public class TaskControllerTest {
     @Autowired
     private MockMvc mockMvc;
@@ -44,7 +49,7 @@ public class TaskControllerTest {
 
     @Test
     void getTaskById_notExistingId_returns404WithMessage() throws Exception{
-        when(taskService.getTaskById(anyLong())).thenThrow(new FoundTaskException());
+        when(taskService.getTaskById(anyLong(), eq("user"))).thenThrow(new FoundTaskException());
         mockMvc.perform(get("/api/tasks/90"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message")
@@ -61,7 +66,7 @@ public class TaskControllerTest {
     }
     @Test
     void createTask_allowedData_createsNewTask() throws Exception{
-        when(taskService.createTask("Test", TaskPriority.HIGH, "Test")).
+        when(taskService.createTask("Test", TaskPriority.HIGH, "Test", "user")).
                 thenReturn(taskResponse(1L, "Test", TaskStatus.NEW, TaskPriority.HIGH));
         mockMvc.perform(post("/api/tasks").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"title\":\"Test\",\"priority\":\"HIGH\",\"description\":\"Test\"}"))
@@ -80,7 +85,7 @@ public class TaskControllerTest {
     }
     @Test
     void getTasks_noFiltersNoTasks_returns200WithEmptyContent() throws Exception{
-        when(taskService.search(isNull(), isNull(), isNull(), any(Pageable.class))).thenReturn(Page.empty());
+        when(taskService.search(eq("user"), isNull(), isNull(), isNull(), isNull(), any(Pageable.class))).thenReturn(Page.empty());
         mockMvc.perform(get("/api/tasks"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isEmpty())
@@ -99,18 +104,18 @@ public class TaskControllerTest {
                 taskResponse(1L, "Первая", TaskStatus.NEW, TaskPriority.HIGH),
                 taskResponse(2L, "Вторая", TaskStatus.NEW, TaskPriority.HIGH)
         ));
-        when(taskService.search(eq(TaskStatus.NEW), isNull(), isNull(), any(Pageable.class)))
+        when(taskService.search(eq("user"), eq(TaskStatus.NEW), isNull(), isNull(), isNull(), any(Pageable.class)))
                 .thenReturn(page);
         mockMvc.perform(get("/api/tasks")
                         .param("status", "NEW")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(2))
                 .andExpect(jsonPath("$.content[0].title").value("Первая"))
                 .andExpect(jsonPath("$.totalElements").value(2));
-        verify(taskService).search(eq(TaskStatus.NEW), isNull(), isNull(), any(Pageable.class));
+        verify(taskService).search(eq("user"), eq(TaskStatus.NEW), isNull(), isNull(), isNull(), any(Pageable.class));
     }
     @Test
     void changeStatus_allowedTransition_returns200AndChangeStatus() throws Exception{
-        when(taskService.changeStatus(TaskStatus.IN_PROCESS, 1L))
+        when(taskService.changeStatus(TaskStatus.IN_PROCESS, 1L, "user"))
                 .thenReturn(taskResponse(1L, "Test", TaskStatus.IN_PROCESS, TaskPriority.HIGH));
         mockMvc.perform(patch("/api/tasks/1/status")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -119,7 +124,7 @@ public class TaskControllerTest {
     }
     @Test
     void changeStatus_notAllowedTransition_returns400AdnDontChangeStatus() throws Exception{
-        when(taskService.changeStatus(TaskStatus.DONE, 1L))
+        when(taskService.changeStatus(TaskStatus.DONE, 1L, "user"))
                 .thenThrow(new ChangeStatusException());
         mockMvc.perform(patch("/api/tasks/1/status")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -131,7 +136,7 @@ public class TaskControllerTest {
     }
     @Test
     void addTag_newTag_returns201AndAddsTagaddTag_newTag_returns201AndAddsTag() throws Exception{
-        when(taskService.addTag("Test", 1L)).thenReturn(List.of("Test"));
+        when(taskService.addTag("Test", 1L, "user")).thenReturn(List.of("Test"));
         mockMvc.perform(post("/api/tasks/1/tags")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"tag\":\"Test\"}"))
@@ -141,7 +146,7 @@ public class TaskControllerTest {
     }
     @Test
     void addTag_duplicateTag_returns409AndDontAddTag() throws Exception{
-        when(taskService.addTag("Test", 1L)).thenThrow(new ExistingTagException());
+        when(taskService.addTag("Test", 1L, "user")).thenThrow(new ExistingTagException());
         mockMvc.perform(post("/api/tasks/1/tags")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"tag\":\"Test\"}"))
@@ -151,16 +156,16 @@ public class TaskControllerTest {
     }
     @Test
     void removeTag_existingTag_returns204AndEmptyBody() throws Exception{
-        when(taskService.removeTag("Test", 1L)).thenReturn(List.of("Work"));
+        when(taskService.removeTag("Test", 1L, "user")).thenReturn(List.of("Work"));
         mockMvc.perform(delete("/api/tasks/1/tags/Test"))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
 
-        verify(taskService).removeTag("Test", 1L);
+        verify(taskService).removeTag("Test", 1L, "user");
     }
     @Test
     void removeTag_notExistingTag_returns404NoServerError() throws Exception{
-        when(taskService.removeTag("Test", 1L)).thenThrow(new NotExistingTagExceptions());
+        when(taskService.removeTag("Test", 1L, "user")).thenThrow(new NotExistingTagExceptions());
         mockMvc.perform(delete("/api/tasks/1/tags/Test"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message")
@@ -171,18 +176,18 @@ public class TaskControllerTest {
         mockMvc.perform(delete("/api/tasks/1"))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
-        verify(taskService).deleteTask(1L);
+        verify(taskService).deleteTask(1L, "user");
     }
     @Test
     void deleteTask_notExistingTask_returns404NoServerError() throws Exception{
-        doThrow(new FoundTaskException()).when(taskService).deleteTask(99L);
+        doThrow(new FoundTaskException()).when(taskService).deleteTask(99L, "user");
         mockMvc.perform(delete("/api/tasks/99"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("No tasks found"));
     }
     @Test
     void changePriority_existingId_returns200AndChangePriority() throws Exception{
-        when(taskService.changePriority(TaskPriority.LOW, 1L))
+        when(taskService.changePriority(TaskPriority.LOW, 1L, "user"))
                 .thenReturn(taskResponse(1L, "Test", TaskStatus.NEW, TaskPriority.LOW));
         mockMvc.perform(patch("/api/tasks/1/priority")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -194,7 +199,7 @@ public class TaskControllerTest {
 
     @Test
     void getStatistic_noTasks_returns200WithZeroCounts() throws Exception{
-        when(taskService.getStatistic())
+        when(taskService.getStatistic("user"))
                 .thenReturn(new TaskStatistic(List.of(), List.of()));
 
         mockMvc.perform(get("/api/tasks/statistic"))
@@ -208,7 +213,7 @@ public class TaskControllerTest {
     void getTasks_filteredByStatusAndPriority_returns200AndTasks() throws Exception{
         Page<TaskResponse> page = new PageImpl<>(
                 List.of(taskResponse(1L, "Test", TaskStatus.NEW, TaskPriority.HIGH)));
-        when(taskService.search(eq(TaskStatus.NEW), eq(TaskPriority.HIGH), isNull(), any(Pageable.class))).thenReturn(page);
+        when(taskService.search(eq("user"), eq(TaskStatus.NEW), eq(TaskPriority.HIGH), isNull(), isNull(), any(Pageable.class))).thenReturn(page);
 
         mockMvc.perform(get("/api/tasks")
                         .param("status", "NEW").param("priority", "HIGH"))
@@ -231,7 +236,7 @@ public class TaskControllerTest {
     void getTasks_filteredByTitleFragment_returns200AndTasks() throws Exception{
         Page<TaskResponse> page = new PageImpl<>(
                 List.of(taskResponse(1L, "Отчёт", TaskStatus.NEW, TaskPriority.HIGH)));
-        when(taskService.search(isNull(), isNull(), eq("отч"), any(Pageable.class)))
+        when(taskService.search(eq("user"), isNull(), isNull(), eq("отч"), isNull(), any(Pageable.class)))
                 .thenReturn(page);
 
         mockMvc.perform(get("/api/tasks").param("title", "отч"))
@@ -241,7 +246,7 @@ public class TaskControllerTest {
 
     @Test
     void getTasks_filterMatchesNothing_returns200AndEmptyContent() throws Exception{
-        when(taskService.search(eq(TaskStatus.CANCELED), isNull(), isNull(), any(Pageable.class)))
+        when(taskService.search(eq("user"), eq(TaskStatus.CANCELED), isNull(), isNull(), isNull(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
 
         mockMvc.perform(get("/api/tasks").param("status", "CANCELED"))
@@ -253,7 +258,7 @@ public class TaskControllerTest {
 
     @Test
     void createTask_clientSuppliedIdAndStatus_ignoresThem() throws Exception{
-        when(taskService.createTask(anyString(), any(TaskPriority.class), anyString()))
+        when(taskService.createTask(anyString(), any(TaskPriority.class), anyString(), eq("user")))
                 .thenReturn(taskResponse(7L, "Sneaky", TaskStatus.NEW, TaskPriority.LOW));
 
         mockMvc.perform(post("/api/tasks").contentType(MediaType.APPLICATION_JSON)
@@ -263,6 +268,6 @@ public class TaskControllerTest {
                 .andExpect(jsonPath("$.id").value(7))
                 .andExpect(jsonPath("$.status").value("NEW"));
 
-        verify(taskService).createTask("Sneaky", TaskPriority.LOW, "Test");
+        verify(taskService).createTask("Sneaky", TaskPriority.LOW, "Test", "user");
     }
 }

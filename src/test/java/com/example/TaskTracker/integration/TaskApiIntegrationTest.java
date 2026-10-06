@@ -109,7 +109,6 @@ public class TaskApiIntegrationTest extends AbstractIntegrationTest {
     @DisplayName("Статистика на пустой базе: все статусы присутствуют с нулями")
     void getStatistic_emptyDatabase_returnsAllStatusesWithZero(){
         rest.get().uri("/api/tasks/statistic")
-                .headers(h -> h.setBearerAuth(tokenFor(ADMIN, ADMIN_PASS)))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()

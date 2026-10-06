@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 
 @RestControllerAdvice
@@ -37,6 +38,16 @@ public class GlobalExceptionHandler {
                                                           HttpServletRequest request) {
         return error(HttpStatus.NOT_FOUND, "TASK_NOT_FOUND", e.getMessage(), request);
     }
+    /**
+     * Отказ @PreAuthorize возникает внутри Spring MVC. Без этого обработчика его поймал бы
+     * catch-all на Exception и превратил 403 в 500.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException e,
+                                                            HttpServletRequest request) {
+        return error(HttpStatus.FORBIDDEN, "ACCESS_DENIED", "Доступ запрещён", request);
+    }
+
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(AuthenticationException e,
                                                               HttpServletRequest request) {

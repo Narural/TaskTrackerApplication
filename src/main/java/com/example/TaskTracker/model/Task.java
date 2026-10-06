@@ -42,6 +42,11 @@ public class        Task {
     @Version
     @Column(nullable = false)
     private Long version;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "owner_id", nullable = false)
+    private AppUser owner;
+
     public Task(String title, TaskPriority priority, String description) {
         this.title = title;
         this.priority = priority;
@@ -49,6 +54,15 @@ public class        Task {
         this.tags = new HashSet<>();
         this.status = TaskStatus.NEW;
         this.createdAt = LocalDateTime.now();
+    }
+
+    public Task(String title, TaskPriority priority, String description, AppUser owner) {
+        this(title, priority, description);
+        this.owner = owner;
+    }
+
+    public AppUser getOwner() {
+        return owner;
     }
 
     public void setTitle(String title) {
