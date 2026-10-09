@@ -58,7 +58,7 @@ public class AuthService {
                 .toList();
 
         String token = jwtService.issue(authentication.getName(), roles);
-        return new LoginResponse(token, JwtService.TOKEN_LIFETIME.toSeconds());
+        return new LoginResponse(token, jwtService.getLifetime().toSeconds());
 
     }
 }

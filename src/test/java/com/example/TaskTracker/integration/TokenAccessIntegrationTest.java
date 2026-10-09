@@ -1,5 +1,6 @@
 package com.example.TaskTracker.integration;
 
+import com.example.TaskTracker.security.JwtProperties;
 import com.example.TaskTracker.security.JwtService;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,7 @@ class TokenAccessIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void request_tokenSignedWithForeignSecret_returns401() {
-        String foreign = new JwtService("completely-different-secret-also-at-least-32-bytes")
+        String foreign = new JwtService(new JwtProperties("completely-different-secret-also-at-least-32-bytes", Duration.ofMinutes(15)))
                 .issue(USER, List.of("USER"));
 
         anonymous.get().uri("/api/tasks")

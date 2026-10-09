@@ -40,10 +40,6 @@ public class GlobalExceptionHandler {
                                                           HttpServletRequest request) {
         return error(HttpStatus.NOT_FOUND, "TASK_NOT_FOUND", e.getMessage(), request);
     }
-    /**
-     * Отказ @PreAuthorize возникает внутри Spring MVC. Без этого обработчика его поймал бы
-     * catch-all на Exception и превратил 403 в 500.
-     */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException e,
                                                             HttpServletRequest request) {
@@ -120,11 +116,6 @@ public class GlobalExceptionHandler {
                                                           HttpServletRequest request) {
         return error(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "Ресурс не найден", request);
     }
-
-    /**
-     * Метод, которого у адреса нет (PUT /api/tasks/1, DELETE /api/tasks) — это ошибка клиента, 405.
-     * Без обработчика исключение уходило в catch-all и превращалось в 500.
-     */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException e,
                                                                   HttpServletRequest request) {
@@ -132,7 +123,6 @@ public class GlobalExceptionHandler {
                 "Метод " + e.getMethod() + " не поддерживается для этого адреса", request);
     }
 
-    /** Тело не в JSON (text/plain) или без Content-Type вовсе — 415. */
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException e,
                                                                      HttpServletRequest request) {

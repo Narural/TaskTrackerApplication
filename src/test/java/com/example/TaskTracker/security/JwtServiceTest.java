@@ -1,6 +1,8 @@
 package com.example.TaskTracker.security;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -12,13 +14,12 @@ import java.time.Duration;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class JwtServiceTest {
 
     private static final String SECRET = "test-secret-not-for-production-at-least-32-bytes";
 
-    private final JwtService jwtService = new JwtService(SECRET);
+    private final JwtService jwtService = new JwtService(new JwtProperties(SECRET, Duration.ofMinutes(15)));
 
     private final JwtDecoder decoder = NimbusJwtDecoder
             .withSecretKey(new SecretKeySpec(SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256"))
@@ -43,19 +44,26 @@ class JwtServiceTest {
                 .isEqualTo(Duration.ofMinutes(15));
     }
 
-    /** С коротким секретом приложение не должно стартовать: бин JwtService не создастся. */
-    @Test
-    void constructor_secretShorterThan32Bytes_failsFast() {
-        assertThatThrownBy(() -> new JwtService("short"))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("JWT_SECRET");
+    /** Поднимает только класс настроек — так же, как его поднимает приложение. */
+    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
+            .withUserConfiguration(PropertiesOnly.class);
+
+    @EnableConfigurationProperties(JwtProperties.class)
+    static class PropertiesOnly {
     }
 
-    /** Граница: ровно 32 байта (256 бит) — допустимо, токен выпускается. */
     @Test
-    void constructor_secretExactly32Bytes_issuesToken() {
-        JwtService service = new JwtService("a".repeat(32));
+    void properties_secretShorterThan32_contextFailsToStart() {
+        contextRunner.withPropertyValues("security.jwt.secret=short")
+                .run(context -> assertThat(context).hasFailed()
+                        .getFailure().rootCause().hasMessageContaining("секрет короче 32 символов"));
+    }
 
-        assertThat(service.issue("kirill", List.of("USER"))).isNotBlank();
+    @Test
+    void properties_secretExactly32_contextStarts() {
+        contextRunner.withPropertyValues("security.jwt.secret=" + "a".repeat(32), "security.jwt.lifetime=15m")
+                .run(context -> assertThat(context).hasNotFailed()
+                        .getBean(JwtProperties.class).extracting(JwtProperties::secret)
+                        .isEqualTo("a".repeat(32)));
     }
 }

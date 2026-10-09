@@ -17,7 +17,6 @@ public class UserController {
         this.authService = authService;
     }
 
-    /** Кто я и какая у меня роль. Поля с паролем в UserResponse нет вообще. */
     @GetMapping("/api/me")
     public ResponseEntity<UserResponse> me(Principal principal) {
         return ResponseEntity.ok(authService.me(principal.getName()));

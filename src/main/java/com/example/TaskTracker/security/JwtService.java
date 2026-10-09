@@ -1,7 +1,6 @@
 package com.example.TaskTracker.security;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
@@ -17,19 +16,15 @@ import java.time.Instant;
 import java.util.List;
 @Service
 public class JwtService {
-    public static final Duration TOKEN_LIFETIME = Duration.ofMinutes(15);
-    /** HS256 требует ключ не короче 256 бит. */
-    public static final int MIN_SECRET_BYTES = 32;
     private final JwtEncoder encoder;
-    public JwtService(@Value("${security.jwt.secret}") String secret){
-        // Проверка при старте: иначе приложение поднималось с коротким секретом,
-        // а каждый вход падал с 500 (KeyLengthException внутри Nimbus).
-        byte[] secretBytes = secret.getBytes(StandardCharsets.UTF_8);
-        if (secretBytes.length < MIN_SECRET_BYTES)
-            throw new IllegalStateException("JWT_SECRET слишком короткий: " + secretBytes.length
-                    + " байт, нужно не меньше " + MIN_SECRET_BYTES);
-        SecretKeySpec key = new SecretKeySpec(secretBytes, "HmacSHA256");
+    private final Duration lifetime;
+    public JwtService(JwtProperties properties){
+        SecretKeySpec key = new SecretKeySpec(properties.secret().getBytes(StandardCharsets.UTF_8), "HmacSHA256");
         this.encoder = new NimbusJwtEncoder(new ImmutableSecret<>(key));
+        this.lifetime = properties.lifetime();
+    }
+    public Duration getLifetime(){
+        return lifetime;
     }
 
     public String issue(String username, List<String> roles){
@@ -37,7 +32,7 @@ public class JwtService {
         JwtClaimsSet claim = JwtClaimsSet.builder()
                 .issuer("task-tracker")
                 .issuedAt(now)
-                .expiresAt(now.plus(TOKEN_LIFETIME))
+                .expiresAt(now.plus(lifetime))
                 .subject(username)
                 .claim("roles", roles)
                 .build();

@@ -20,10 +20,6 @@ import java.net.URI;
 import java.security.Principal;
 import java.util.List;
 
-/**
- * Контроллер не принимает решений о доступе: он только передаёт сервису, кто пришёл.
- * Имя берётся из проверенного токена (Principal), а не из тела запроса.
- */
 @RestController
 @RequestMapping("/api/tasks")
 public class TaskController {
@@ -94,7 +90,6 @@ public class TaskController {
         return ResponseEntity.noContent().build();
     }
 
-    /** Статистика по своим задачам: считать чужие — значит раскрывать, сколько их у других. */
     @GetMapping("/statistic")
     public ResponseEntity<TaskStatistic> showStatistic(Principal principal) {
         return ResponseEntity.ok(taskService.getStatistic(principal.getName()));
