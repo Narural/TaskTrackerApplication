@@ -74,6 +74,51 @@ class AuthApiIntegrationTest extends AbstractIntegrationTest {
         assertThat(usersCount).isEqualTo(0);
     }
 
+    /** 40 русских букв — 40 символов, но 80 байт: больше, чем принимает BCrypt (72). Раньше было 500. */
+    @Test
+    void register_cyrillicPasswordOver72Bytes_returns400AndNoUser() {
+        rest.post().uri("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("username", "masha", "password", "ж".repeat(40)))
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.code").isEqualTo("VALIDATION_FAILED");
+
+        Long usersCount = jdbcTemplate.queryForObject(
+                "select count(*) from users where username = ?", Long.class, "masha");
+        assertThat(usersCount).isEqualTo(0);
+    }
+
+    /** Граница: 36 русских букв — ровно 72 байта, ещё можно; и с таким паролем можно войти. */
+    @Test
+    void register_cyrillicPasswordExactly72Bytes_returns201AndCanLogin() {
+        String password = "ж".repeat(36);
+        rest.post().uri("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("username", "masha", "password", password))
+                .exchange()
+                .expectStatus().isCreated();
+
+        anonymous.post().uri("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("username", "masha", "password", password))
+                .exchange()
+                .expectStatus().isOk();
+    }
+
+    /** Вход с паролем длиннее 72 байт — обычный отказ 401, а не 500. */
+    @Test
+    void login_passwordOver72Bytes_returns401() {
+        anonymous.post().uri("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("username", USER, "password", "ж".repeat(40)))
+                .exchange()
+                .expectStatus().isUnauthorized()
+                .expectBody()
+                .jsonPath("$.code").isEqualTo("BAD_CREDENTIALS");
+    }
+
     @Test
     void login_unknownUser_returns401() {
         anonymous.post().uri("/api/auth/login")

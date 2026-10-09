@@ -64,8 +64,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // открыто ровно два адреса — войти и зарегистрироваться можно только до того, как ты кто-то
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
-                        // цепочка — грубая линия по URL; роль ADMIN проверяет @PreAuthorize на методе
-                        .requestMatchers("/api/admin/**").authenticated()
+                        // роль проверяется уже здесь, по адресу: новый админский метод, на который забыли
+                        // повесить @PreAuthorize, всё равно закрыт. @PreAuthorize остаётся вторым рубежом
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/me").authenticated()
                         // владение задачами решает сервис, цепочка только требует входа
                         .requestMatchers("/api/tasks/**").authenticated()

@@ -18,9 +18,17 @@ import java.util.List;
 @Service
 public class JwtService {
     public static final Duration TOKEN_LIFETIME = Duration.ofMinutes(15);
+    /** HS256 требует ключ не короче 256 бит. */
+    public static final int MIN_SECRET_BYTES = 32;
     private final JwtEncoder encoder;
     public JwtService(@Value("${security.jwt.secret}") String secret){
-        SecretKeySpec key = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        // Проверка при старте: иначе приложение поднималось с коротким секретом,
+        // а каждый вход падал с 500 (KeyLengthException внутри Nimbus).
+        byte[] secretBytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (secretBytes.length < MIN_SECRET_BYTES)
+            throw new IllegalStateException("JWT_SECRET слишком короткий: " + secretBytes.length
+                    + " байт, нужно не меньше " + MIN_SECRET_BYTES);
+        SecretKeySpec key = new SecretKeySpec(secretBytes, "HmacSHA256");
         this.encoder = new NimbusJwtEncoder(new ImmutableSecret<>(key));
     }
 

@@ -200,14 +200,27 @@ class TaskAccessIntegrationTest extends AbstractIntegrationTest {
     @Test
     @DisplayName("Статистика не раскрывает, сколько задач у других")
     void statistic_countsOnlyOwnTasks() {
-        createTask(rest, "Моя");
-        createTask(bob, "Боба 1");
-        createTask(bob, "Боба 2");
+        createTask(rest, "Моя", "LOW");
+        long bobs = createTask(bob, "Боба 1", "HIGH");
+        createTask(bob, "Боба 2", "CRITICAL");
+        bob.patch().uri("/api/tasks/{id}/status", bobs)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("status", "IN_PROCESS"))
+                .exchange()
+                .expectStatus().isOk();
 
+        // totalTasks складывается из счётчиков по статусам, поэтому по нему одному не видно
+        // утечки в подсчёте по приоритетам — проверяем обе разбивки по отдельности.
+        // У Боба другие приоритеты и другой статус: любая чужая строка даст ненулевой счётчик.
         rest.get().uri("/api/tasks/statistic").exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.totalTasks").isEqualTo(1);
+                .jsonPath("$.totalTasks").isEqualTo(1)
+                .jsonPath("$.countByPriority.LOW").isEqualTo(1)
+                .jsonPath("$.countByPriority.HIGH").isEqualTo(0)
+                .jsonPath("$.countByPriority.CRITICAL").isEqualTo(0)
+                .jsonPath("$.countByStatus.NEW").isEqualTo(1)
+                .jsonPath("$.countByStatus.IN_PROCESS").isEqualTo(0);
     }
 
     // ---------- администратор ----------
@@ -260,9 +273,13 @@ class TaskAccessIntegrationTest extends AbstractIntegrationTest {
     // ---------- помощники ----------
 
     private long createTask(RestTestClient client, String title) {
+        return createTask(client, title, "LOW");
+    }
+
+    private long createTask(RestTestClient client, String title, String priority) {
         Map<?, ?> created = client.post().uri("/api/tasks")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of("title", title, "priority", "LOW", "description", "x"))
+                .body(Map.of("title", title, "priority", priority, "description", "x"))
                 .exchange()
                 .expectStatus().isCreated()
                 .expectBody(Map.class)

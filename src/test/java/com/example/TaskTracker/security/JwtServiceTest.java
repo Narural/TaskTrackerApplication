@@ -12,6 +12,7 @@ import java.time.Duration;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class JwtServiceTest {
 
@@ -40,5 +41,21 @@ class JwtServiceTest {
 
         assertThat(Duration.between(jwt.getIssuedAt(), jwt.getExpiresAt()))
                 .isEqualTo(Duration.ofMinutes(15));
+    }
+
+    /** С коротким секретом приложение не должно стартовать: бин JwtService не создастся. */
+    @Test
+    void constructor_secretShorterThan32Bytes_failsFast() {
+        assertThatThrownBy(() -> new JwtService("short"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("JWT_SECRET");
+    }
+
+    /** Граница: ровно 32 байта (256 бит) — допустимо, токен выпускается. */
+    @Test
+    void constructor_secretExactly32Bytes_issuesToken() {
+        JwtService service = new JwtService("a".repeat(32));
+
+        assertThat(service.issue("kirill", List.of("USER"))).isNotBlank();
     }
 }

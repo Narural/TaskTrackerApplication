@@ -13,6 +13,8 @@ import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -117,6 +119,25 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleNoResource(NoResourceFoundException e,
                                                           HttpServletRequest request) {
         return error(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "Ресурс не найден", request);
+    }
+
+    /**
+     * Метод, которого у адреса нет (PUT /api/tasks/1, DELETE /api/tasks) — это ошибка клиента, 405.
+     * Без обработчика исключение уходило в catch-all и превращалось в 500.
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException e,
+                                                                  HttpServletRequest request) {
+        return error(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED",
+                "Метод " + e.getMethod() + " не поддерживается для этого адреса", request);
+    }
+
+    /** Тело не в JSON (text/plain) или без Content-Type вовсе — 415. */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException e,
+                                                                     HttpServletRequest request) {
+        return error(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_MEDIA_TYPE",
+                "Тело запроса должно быть в формате application/json", request);
     }
 
     @ExceptionHandler(Exception.class)

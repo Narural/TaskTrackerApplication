@@ -270,4 +270,39 @@ public class TaskControllerTest {
 
         verify(taskService).createTask("Sneaky", TaskPriority.LOW, "Test", "user");
     }
+
+    // ---------- неправильный запрос — ошибка клиента (4xx), а не 500 ----------
+
+    @Test
+    void putTask_methodNotSupported_returns405() throws Exception{
+        mockMvc.perform(put("/api/tasks/1").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.code").value("METHOD_NOT_ALLOWED"));
+        verifyNoInteractions(taskService);
+    }
+
+    @Test
+    void deleteTaskList_methodNotSupported_returns405() throws Exception{
+        mockMvc.perform(delete("/api/tasks"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.code").value("METHOD_NOT_ALLOWED"));
+        verifyNoInteractions(taskService);
+    }
+
+    @Test
+    void createTask_textPlainBody_returns415() throws Exception{
+        mockMvc.perform(post("/api/tasks").contentType(MediaType.TEXT_PLAIN).content("Купить хлеб"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE"));
+        verifyNoInteractions(taskService);
+    }
+
+    @Test
+    void createTask_withoutContentType_returns415() throws Exception{
+        mockMvc.perform(post("/api/tasks")
+                        .content("{\"title\":\"Test\",\"priority\":\"HIGH\",\"description\":\"Test\"}"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE"));
+        verifyNoInteractions(taskService);
+    }
 }

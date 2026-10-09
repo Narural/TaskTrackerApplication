@@ -81,4 +81,44 @@ class TaskAccessWebTest {
                                 .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().isOk());
     }
+
+    // ---------- правила самой цепочки, без @PreAuthorize ----------
+
+    @Test
+    @WithAnonymousUser
+    void unknownPath_withoutToken_returns401() throws Exception {
+        mockMvc.perform(get("/api/nosuchpath"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    /** Ловит замену anyRequest().denyAll() на permitAll(): тогда здесь был бы 404. */
+    @Test
+    void unknownPath_withToken_returns403FromDenyAll() throws Exception {
+        mockMvc.perform(get("/api/nosuchpath")
+                        .with(jwt().jwt(j -> j.subject("anna"))
+                                .authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+    }
+
+    /**
+     * На этом адресе нет метода и нет @PreAuthorize — USER отсекает только цепочка.
+     * С authenticated() вместо hasRole("ADMIN") запрос дошёл бы до MVC и получил 404.
+     */
+    @Test
+    void adminUnmappedPath_userRole_returns403FromChain() throws Exception {
+        mockMvc.perform(get("/api/admin/nosuchpath")
+                        .with(jwt().jwt(j -> j.subject("anna"))
+                                .authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+    }
+
+    @Test
+    void adminUnmappedPath_adminRole_passesChainAndReturns404() throws Exception {
+        mockMvc.perform(get("/api/admin/nosuchpath")
+                        .with(jwt().jwt(j -> j.subject("root"))
+                                .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                .andExpect(status().isNotFound());
+    }
 }

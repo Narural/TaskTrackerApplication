@@ -1,4 +1,5 @@
 package com.example.TaskTracker.dto;
+import com.example.TaskTracker.validation.MaxUtf8Bytes;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -10,6 +11,7 @@ public class RegistrationRequest {
     @NotBlank(message = "Пароль не должен быть пустым")
     @Size(max = 70, message = "Пароль не может привышать 70 символов")
     @Size(min = 8, message = "Пароль не может быть короче 8 символов")
+    @MaxUtf8Bytes(value = 72, message = "Пароль слишком длинный: не больше 72 байт (русская буква — 2 байта)")
     private String password;
 
     public String getUsername() {

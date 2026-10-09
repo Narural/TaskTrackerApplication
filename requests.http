@@ -245,8 +245,48 @@ Content-Type: application/json
 
 {"username": "carol", "password": "1234567"}
 
-### Несуществующий путь — 401 (закрыт denyAll ещё до проверки адреса)
+### Регистрация с паролем из 40 русских букв — 400: это 80 байт, а BCrypt принимает не больше 72
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{"username": "carol", "password": "жжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжж"}
+
+### Несуществующий путь без токена — 401 (закрыт denyAll ещё до проверки адреса)
 GET {{host}}/api/nosuchpath
+
+### Несуществующий путь с токеном — 403 (denyAll; с permitAll здесь был бы 404)
+GET {{host}}/api/nosuchpath
+Authorization: Bearer {{annaToken}}
+
+### Несуществующий админский адрес под USER — 403: роль проверяет уже цепочка, а не только @PreAuthorize
+GET {{host}}/api/admin/nosuchpath
+Authorization: Bearer {{annaToken}}
+
+### ===================== 4а. Неправильный запрос — 4xx, а не 500 =====================
+
+### Метода у адреса нет — 405
+PUT {{host}}/api/tasks/{{annaTaskId}}
+Authorization: Bearer {{annaToken}}
+Content-Type: application/json
+
+{"title": "x"}
+
+### Удалить весь список разом нельзя — 405
+DELETE {{host}}/api/tasks
+Authorization: Bearer {{annaToken}}
+
+### Тело не JSON — 415
+POST {{host}}/api/tasks
+Authorization: Bearer {{annaToken}}
+Content-Type: text/plain
+
+Купить хлеб
+
+### Тело без Content-Type — 415
+POST {{host}}/api/tasks
+Authorization: Bearer {{annaToken}}
+
+{"title": "Без типа", "priority": "LOW", "description": "x"}
 
 ### ===================== 5. Уборка =====================
 
