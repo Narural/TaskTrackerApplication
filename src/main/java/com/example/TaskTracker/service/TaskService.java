@@ -1,4 +1,6 @@
 package com.example.TaskTracker.service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -14,16 +16,14 @@ import com.example.TaskTracker.repository.TaskRepository;
 import com.example.TaskTracker.dto.TaskResponse;
 import com.example.TaskTracker.dto.TaskStatistic;
 import org.springframework.stereotype.Service;
+import org.springframework.security.core.AuthenticationException;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Владение решается здесь и только здесь: каждый метод получает имя того, кто пришёл,
- * и достаёт из базы только его строки. Чужая задача неотличима от несуществующей — 404.
- */
 @Service
 public class TaskService {
+    private static final Logger log = LoggerFactory.getLogger(TaskService.class);
     private final TaskRepository taskRepository;
     private final AppUserRepository userRepository;
 
@@ -60,15 +60,18 @@ public class TaskService {
         AppUser owner = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Пользователь не найден"));
         Task newTask = new Task(title, priority, description, owner);
-        return new TaskResponse(taskRepository.save(newTask));
+        Task saved = taskRepository.save(newTask);
+        log.info("Создана задача id={} владельцем {}", saved.getId(), username);
+        return new TaskResponse(saved);
     }
 
     @Transactional
     public TaskResponse changeStatus(TaskStatus status, long id, String username){
         Task newTask = findOwnedTask(id, username);
-        if(newTask.getStatus().canMoveTo(status))
+        if(newTask.getStatus().canMoveTo(status)) {
+            log.info("Задача id={}: статус {} -> {}, автор {}", id, newTask.getStatus(), status, username);
             newTask.setStatus(status);
-        else
+        } else
             throw new ChangeStatusException();
         return new TaskResponse(newTask);
     }
@@ -98,6 +101,7 @@ public class TaskService {
     public void deleteTask(long id, String username){
         Task newTask = findOwnedTask(id, username);
         taskRepository.delete(newTask);
+        log.info("Удалена задача id={} владельцем {}", id, username);
     }
 
     @Transactional(readOnly = true)

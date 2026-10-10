@@ -12,20 +12,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Фильтры списка задач. Незаданный фильтр не добавляет условие в SQL вообще —
- * поэтому в запрос никогда не уходит null-параметр, тип которого база не может вывести.
- */
 public final class TaskSpecifications {
 
     private TaskSpecifications() {
     }
 
-    /**
-     * Задачи одного владельца. Владелец — обязательное условие, а не ещё один необязательный
-     * фильтр: забыть его нельзя, метод без имени просто не вызовешь. Условие уходит в SQL,
-     * чужие строки базу не покидают.
-     */
     public static Specification<Task> ownedBy(String username, TaskStatus status, TaskPriority priority,
                                               String title, String tag) {
         Objects.requireNonNull(username, "username");
@@ -36,7 +27,6 @@ public final class TaskSpecifications {
         };
     }
 
-    /** Задачи всех пользователей — только для административного списка. */
     public static Specification<Task> filter(TaskStatus status, TaskPriority priority,
                                              String title, String tag) {
         return (root, query, builder) ->
@@ -59,7 +49,6 @@ public final class TaskSpecifications {
                     "%" + title.toLowerCase() + "%"));
         }
         if (tag != null && !tag.isBlank()) {
-            // пара (task_id, tag) уникальна, поэтому соединение не размножает задачи
             predicates.add(builder.equal(root.join("tags"), tag));
         }
         return predicates;

@@ -4,11 +4,6 @@ import org.springframework.data.domain.Page;
 
 import java.util.List;
 
-/**
- * Стабильная форма страничного ответа.
- * Нужна, чтобы наружу не уезжала внутренняя структура Spring Data:
- * её поля определяет версия библиотеки, а не наш контракт.
- */
 public class PageResponse<T> {
 
     private final List<T> content;

@@ -13,13 +13,15 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-
+import org.springframework.security.core.AuthenticationException;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 @Service
 public class AuthService {
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private final AppUserRepository userRepository;
     private final PasswordEncoder encoder;
     private final AuthenticationManager authenticationManager;
@@ -37,7 +39,9 @@ public class AuthService {
     public UserResponse register(RegistrationRequest request){
         String hash = encoder.encode(request.getPassword());
         AppUser user = new AppUser(request.getUsername(), hash, Role.USER);
-        return new UserResponse(userRepository.save(user));
+        AppUser saved = userRepository.save(user);
+        log.info("Зарегистрирован пользователь {}", saved.getUsername());
+        return new UserResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -48,8 +52,14 @@ public class AuthService {
     }
 
     public LoginResponse login(LoginRequest request){
-        Authentication authentication = authenticationManager.authenticate
-                (new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
+        } catch (AuthenticationException e) {
+            log.warn("Неудачный вход пользователя {}", request.getUsername());
+            throw e;
+        }
         List<String> roles = authentication.getAuthorities()
                 .stream()
                 .map(GrantedAuthority::getAuthority)

@@ -26,10 +26,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Правила доступа на срезе: настоящая цепочка фильтров и @PreAuthorize, сервис подменён.
- * Без @Import(SecurityConfig.class) тест проверял бы стандартную защиту Boot, а не нашу.
- */
 @WebMvcTest({TaskController.class, AdminTaskController.class})
 @Import(SecurityConfig.class)
 class TaskAccessWebTest {
@@ -82,8 +78,6 @@ class TaskAccessWebTest {
                 .andExpect(status().isOk());
     }
 
-    // ---------- правила самой цепочки, без @PreAuthorize ----------
-
     @Test
     @WithAnonymousUser
     void unknownPath_withoutToken_returns401() throws Exception {
@@ -91,7 +85,6 @@ class TaskAccessWebTest {
                 .andExpect(status().isUnauthorized());
     }
 
-    /** Ловит замену anyRequest().denyAll() на permitAll(): тогда здесь был бы 404. */
     @Test
     void unknownPath_withToken_returns403FromDenyAll() throws Exception {
         mockMvc.perform(get("/api/nosuchpath")
@@ -101,10 +94,6 @@ class TaskAccessWebTest {
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
     }
 
-    /**
-     * На этом адресе нет метода и нет @PreAuthorize — USER отсекает только цепочка.
-     * С authenticated() вместо hasRole("ADMIN") запрос дошёл бы до MVC и получил 404.
-     */
     @Test
     void adminUnmappedPath_userRole_returns403FromChain() throws Exception {
         mockMvc.perform(get("/api/admin/nosuchpath")

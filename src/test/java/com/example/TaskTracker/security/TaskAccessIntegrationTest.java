@@ -13,13 +13,6 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Главная проверка недели: два пользователя, у каждого по задаче, и попытки из-под одного
- * добраться до данных другого. Каждый отрицательный тест проверяет не только код ответа,
- * но и то, что в базе ничего не изменилось.
- *
- * rest — клиент пользователя USER (настроен в AbstractIntegrationTest), bob — второй пользователь.
- */
 class TaskAccessIntegrationTest extends AbstractIntegrationTest {
 
     private static final String BOB = "bob";
@@ -35,8 +28,6 @@ class TaskAccessIntegrationTest extends AbstractIntegrationTest {
                 .defaultHeaders(h -> h.setBearerAuth(bobToken))
                 .build();
     }
-
-    // ---------- список и чтение ----------
 
     @Test
     @DisplayName("Каждый видит в списке только свои задачи — и в содержимом, и в счётчике")
@@ -96,8 +87,6 @@ class TaskAccessIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(countTasks(mine)).isZero();
     }
-
-    // ---------- изменение чужого ----------
 
     @Test
     void changeStatus_foreignTask_returns404AndStatusUnchanged() {
@@ -161,8 +150,6 @@ class TaskAccessIntegrationTest extends AbstractIntegrationTest {
         assertThat(countTasks(bobs)).isEqualTo(1);
     }
 
-    // ---------- владелец берётся из токена ----------
-
     @Test
     @DisplayName("Владелец новой задачи — тот, кто пришёл с токеном, даже если в теле указан другой")
     void createTask_ownerInBody_isIgnored() {
@@ -209,9 +196,6 @@ class TaskAccessIntegrationTest extends AbstractIntegrationTest {
                 .exchange()
                 .expectStatus().isOk();
 
-        // totalTasks складывается из счётчиков по статусам, поэтому по нему одному не видно
-        // утечки в подсчёте по приоритетам — проверяем обе разбивки по отдельности.
-        // У Боба другие приоритеты и другой статус: любая чужая строка даст ненулевой счётчик.
         rest.get().uri("/api/tasks/statistic").exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -222,8 +206,6 @@ class TaskAccessIntegrationTest extends AbstractIntegrationTest {
                 .jsonPath("$.countByStatus.NEW").isEqualTo(1)
                 .jsonPath("$.countByStatus.IN_PROCESS").isEqualTo(0);
     }
-
-    // ---------- администратор ----------
 
     @Test
     void adminTasks_userRole_returns403() {
@@ -251,8 +233,6 @@ class TaskAccessIntegrationTest extends AbstractIntegrationTest {
                 .jsonPath("$.totalElements").isEqualTo(2);
     }
 
-    // ---------- кто я ----------
-
     @Test
     void me_returnsCurrentUserWithoutPassword() {
         rest.get().uri("/api/me").exchange()
@@ -269,8 +249,6 @@ class TaskAccessIntegrationTest extends AbstractIntegrationTest {
         anonymous.get().uri("/api/me").exchange()
                 .expectStatus().isUnauthorized();
     }
-
-    // ---------- помощники ----------
 
     private long createTask(RestTestClient client, String title) {
         return createTask(client, title, "LOW");

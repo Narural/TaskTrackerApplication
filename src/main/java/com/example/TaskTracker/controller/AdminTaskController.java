@@ -13,10 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Операции администратора. Цепочка фильтров пускает сюда любого вошедшего,
- * а роль проверяет аннотация на методе — так снятие @PreAuthorize сразу видно по тестам.
- */
 @RestController
 @RequestMapping("/api/admin/tasks")
 public class AdminTaskController {

@@ -15,22 +15,16 @@ import java.util.Optional;
 
 public interface TaskRepository extends JpaRepository<Task, Long>, JpaSpecificationExecutor<Task> {
 
-    /**
-     * Задачи одного владельца с необязательными фильтрами.
-     * Любой фильтр может быть null — тогда его условие в запрос не попадает.
-     */
     default Page<Task> searchOwned(String username, TaskStatus status, TaskPriority priority,
                                    String title, String tag, Pageable pageable) {
         return findAll(TaskSpecifications.ownedBy(username, status, priority, title, tag), pageable);
     }
 
-    /** Задачи всех пользователей — для администратора. */
     default Page<Task> searchAll(TaskStatus status, TaskPriority priority,
                                  String title, String tag, Pageable pageable) {
         return findAll(TaskSpecifications.filter(status, priority, title, tag), pageable);
     }
 
-    /** Чужая задача и несуществующая неотличимы: обе дают пустой Optional. */
     Optional<Task> findByIdAndOwnerUsername(Long id, String username);
 
     @Query("select t.status as status, count(t) as count from Task t "

@@ -46,7 +46,6 @@ public class TaskControllerTest {
         return new TaskResponse(task);
     }
 
-
     @Test
     void getTaskById_notExistingId_returns404WithMessage() throws Exception{
         when(taskService.getTaskById(anyLong(), eq("user"))).thenThrow(new FoundTaskException());
@@ -196,7 +195,6 @@ public class TaskControllerTest {
                 .andExpect(jsonPath("$.priority").value("LOW"));
     }
 
-
     @Test
     void getStatistic_noTasks_returns200WithZeroCounts() throws Exception{
         when(taskService.getStatistic("user"))
@@ -270,8 +268,6 @@ public class TaskControllerTest {
 
         verify(taskService).createTask("Sneaky", TaskPriority.LOW, "Test", "user");
     }
-
-    // ---------- неправильный запрос — ошибка клиента (4xx), а не 500 ----------
 
     @Test
     void putTask_methodNotSupported_returns405() throws Exception{

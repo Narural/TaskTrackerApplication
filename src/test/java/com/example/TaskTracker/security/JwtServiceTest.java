@@ -44,7 +44,6 @@ class JwtServiceTest {
                 .isEqualTo(Duration.ofMinutes(15));
     }
 
-    /** Поднимает только класс настроек — так же, как его поднимает приложение. */
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withUserConfiguration(PropertiesOnly.class);
 

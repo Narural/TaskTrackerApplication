@@ -74,7 +74,6 @@ class AuthApiIntegrationTest extends AbstractIntegrationTest {
         assertThat(usersCount).isEqualTo(0);
     }
 
-    /** 40 русских букв — 40 символов, но 80 байт: больше, чем принимает BCrypt (72). Раньше было 500. */
     @Test
     void register_cyrillicPasswordOver72Bytes_returns400AndNoUser() {
         rest.post().uri("/api/auth/register")
@@ -90,7 +89,6 @@ class AuthApiIntegrationTest extends AbstractIntegrationTest {
         assertThat(usersCount).isEqualTo(0);
     }
 
-    /** Граница: 36 русских букв — ровно 72 байта, ещё можно; и с таким паролем можно войти. */
     @Test
     void register_cyrillicPasswordExactly72Bytes_returns201AndCanLogin() {
         String password = "ж".repeat(36);
@@ -107,7 +105,6 @@ class AuthApiIntegrationTest extends AbstractIntegrationTest {
                 .expectStatus().isOk();
     }
 
-    /** Вход с паролем длиннее 72 байт — обычный отказ 401, а не 500. */
     @Test
     void login_passwordOver72Bytes_returns401() {
         anonymous.post().uri("/api/auth/login")

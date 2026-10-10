@@ -15,7 +15,6 @@ public class MaxUtf8BytesValidator implements ConstraintValidator<MaxUtf8Bytes, 
 
     @Override
     public boolean isValid(String value, ConstraintValidatorContext context){
-        // null проверяет @NotBlank, здесь только длина
         return value == null || value.getBytes(StandardCharsets.UTF_8).length <= max;
     }
 }

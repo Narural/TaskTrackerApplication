@@ -13,6 +13,7 @@ import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -136,5 +137,9 @@ public class GlobalExceptionHandler {
         log.error("Необработанное исключение", e);
         return error(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR",
                 "Внутренняя ошибка сервера", request);
+    }
+    @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
+    public ResponseEntity<Void> handleNotAcceptable(HttpMediaTypeNotAcceptableException e) {
+        return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).build();
     }
 }
