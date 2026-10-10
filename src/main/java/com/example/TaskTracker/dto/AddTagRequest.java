@@ -7,7 +7,6 @@ public class AddTagRequest {
     @NotBlank(message = "Тэг не может быть пустым")
     @Size(max = 100)
     public String tag;
-
     public String getTag() {
         return tag;
     }
