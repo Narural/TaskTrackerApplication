@@ -3,6 +3,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.TaskTracker.model.AppUser;
@@ -43,7 +44,7 @@ public class TaskService {
         return taskRepository.searchOwned(username, status, priority, title, tag, pageable)
                 .map(TaskResponse::new);
     }
-
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional(readOnly = true)
     public Page<TaskResponse> searchAll(TaskStatus status, TaskPriority priority,
                                         String title, String tag, Pageable pageable){

@@ -3,6 +3,8 @@ import com.example.TaskTracker.validation.MaxUtf8Bytes;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+import java.util.Locale;
+
 public class RegistrationRequest {
     @NotBlank(message = "Имя не должно быть пустым")
     @Size(max = 50, message = "Имя не может превышать 50 символов")
@@ -19,7 +21,7 @@ public class RegistrationRequest {
     }
 
     public void setUsername(String username) {
-        this.username = username;
+        this.username = username == null ? null : username.trim().toLowerCase(Locale.ROOT);
     }
 
     public String getPassword() {

@@ -158,4 +158,41 @@ class AuthApiIntegrationTest extends AbstractIntegrationTest {
         assertThat(payload).contains("\"sub\":\"" + USER + "\"");
         assertThat(payload).contains("\"roles\":[\"USER\"]");
     }
+    @Test
+    void register_usernameWithSpacesAndCapitals_isStoredTrimmedAndLowercase() {
+        rest.post().uri("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("username", "  Masha  ", "password", "secret123"))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody()
+                .jsonPath("$.username").isEqualTo("masha");
+
+        Long usersCount = jdbcTemplate.queryForObject(
+                "select count(*) from users where username = ?", Long.class, "masha");
+        assertThat(usersCount).isEqualTo(1);
+    }
+
+    @Test
+    void register_sameNameInOtherCase_returns409() {
+        rest.post().uri("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("username", "masha", "password", "secret123"))
+                .exchange()
+                .expectStatus().isCreated();
+        rest.post().uri("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("username", "MASHA", "password", "secret123"))
+                .exchange()
+                .expectStatus().isEqualTo(409);
+    }
+
+    @Test
+    void login_usernameInOtherCaseWithSpaces_succeeds() {
+        anonymous.post().uri("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("username", " USER ", "password", USER_PASS))
+                .exchange()
+                .expectStatus().isOk();
+    }
 }

@@ -27,3 +27,13 @@ jobs:
         with:
           name: jacoco-report
           path: target/site/jacoco/
+
+      - name: Build image and start the stack
+        run: |
+          printf 'DB_PASSWORD=ci-password\nJWT_SECRET=%s\nADMIN_PASSWORD=ci-admin-password\n' "$(openssl rand -base64 48)" > .env
+          docker compose up -d --wait
+          curl -fs http://localhost:8080/actuator/health
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs

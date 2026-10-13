@@ -19,6 +19,7 @@ services:
       DB_URL: jdbc:postgresql://db:5432/tasks
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:?задай JWT_SECRET в .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?задай ADMIN_PASSWORD в .env}
     ports:
       - "8080:8080"
     depends_on:

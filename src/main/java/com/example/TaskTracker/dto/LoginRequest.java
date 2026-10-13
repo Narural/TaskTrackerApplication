@@ -2,6 +2,8 @@ package com.example.TaskTracker.dto;
 
 import jakarta.validation.constraints.NotBlank;
 
+import java.util.Locale;
+
 public class LoginRequest {
     @NotBlank(message = "Логин не должен быть пустой")
     private String username;
@@ -14,7 +16,7 @@ public class LoginRequest {
     }
 
     public void setUsername(String username) {
-        this.username = username;
+        this.username = username == null ? null : username.trim().toLowerCase(Locale.ROOT);
     }
 
     public String getPassword() {
