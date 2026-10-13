@@ -3,6 +3,7 @@
 ### раздел 0 регистрирует двух пользователей, входит и запоминает токены и id задач.
 
 @host = http://localhost:8080
+@adminPassword = впиши-сюда-ADMIN_PASSWORD-из-.env
 
 ### ===================== 0. Пользователи и вход =====================
 
@@ -35,11 +36,11 @@ Content-Type: application/json
 > {% client.global.set("bobToken", response.body.token); %}
 
 ### Вход администратора — 200; токен в {{adminToken}}
-### Администратор через API не создаётся (регистрация всегда даёт USER) — см. README, раздел «Доступ».
+### Администратор создаётся при старте из ADMIN_PASSWORD (см. README) — впиши тот же пароль в @adminPassword вверху.
 POST {{host}}/api/auth/login
 Content-Type: application/json
 
-{"username": "admin", "password": "adminpass123"}
+{"username": "admin", "password": "{{adminPassword}}"}
 
 > {% client.global.set("adminToken", response.body.token); %}
 
@@ -287,6 +288,44 @@ POST {{host}}/api/tasks
 Authorization: Bearer {{annaToken}}
 
 {"title": "Без типа", "priority": "LOW", "description": "x"}
+
+### ===================== 4б. Actuator и идентификатор запроса =====================
+
+### Состояние — 200 без токена, в ответе только статус
+GET {{host}}/actuator/health
+
+### Готовность — 200, пока база доступна
+GET {{host}}/actuator/health/readiness
+
+### Живость — 200, от базы не зависит
+GET {{host}}/actuator/health/liveness
+
+### Состояние с компонентами — для ADMIN
+GET {{host}}/actuator/health
+Authorization: Bearer {{adminToken}}
+
+### Метрики без токена — 401
+GET {{host}}/actuator/metrics
+
+### Метрики под USER — 403
+GET {{host}}/actuator/metrics
+Authorization: Bearer {{annaToken}}
+
+### Метрики под ADMIN — 200
+GET {{host}}/actuator/metrics
+Authorization: Bearer {{adminToken}}
+
+### Переменные окружения без токена — 401
+GET {{host}}/actuator/env
+
+### Переменные окружения под ADMIN — 404: адрес не опубликован
+GET {{host}}/actuator/env
+Authorization: Bearer {{adminToken}}
+
+### Свой идентификатор запроса — вернётся в заголовке X-Request-Id, в логе все строки с demo-1
+GET {{host}}/api/tasks
+Authorization: Bearer {{annaToken}}
+X-Request-Id: demo-1
 
 ### ===================== 5. Уборка =====================
 
